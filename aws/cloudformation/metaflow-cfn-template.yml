@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Stack for complete deployment of Metaflow Sandboxes
+Description: Stack for complete deployment of Metaflow
 
 Parameters:
   SagemakerInstance: 
@@ -58,7 +58,7 @@ Mappings:
     ServiceName:
       value: 'metadata-service'
     ImageUrl:
-      value: '195955287334.dkr.ecr.us-west-2.amazonaws.com/metaflow-service:v2.0'
+      value: 'netflixoss/metaflow_metadata_service'
     ContainerPort:
       value: 8080
     ContainerCpu:
