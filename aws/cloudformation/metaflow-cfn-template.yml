@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Stack for complete deployment of Metaflow
+Description: Stack for complete deployment of Metaflow Sandboxes
 
 Parameters:
   SagemakerInstance: 
@@ -58,7 +58,7 @@ Mappings:
     ServiceName:
       value: 'metadata-service'
     ImageUrl:
-      value: 'netflixoss/metaflow_metadata_service'
+      value: '195955287334.dkr.ecr.us-west-2.amazonaws.com/metaflow-service:v2.0'
     ContainerPort:
       value: 8080
     ContainerCpu:
@@ -721,6 +721,19 @@ Resources:
               Effect: Allow
               Action: sagemaker:DescribeTrainingJob
               Resource: !Sub arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*
+            - Sid: AllowSagemakerDeploy
+              Effect: Allow
+              Action:
+                - "sagemaker:CreateModel"
+                - "sagemaker:CreateEndpointConfig"
+                - "sagemaker:CreateEndpoint"
+                - "sagemaker:DescribeModel"
+                - "sagemaker:DescribeEndpoint"
+                - "sagemaker:InvokeEndpoint"
+              Resource:
+                - !Sub "arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/*"
+                - !Sub "arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*"
+                - !Sub "arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*"
         - PolicyName: IAM_PASS_ROLE
           PolicyDocument:
             Version: '2012-10-17'
@@ -994,4 +1007,6 @@ Outputs:
   ECSJobRole:
     Description: Role to be applied to Metaflow Batch Job Definitions
     Value: !GetAtt 'BatchS3TaskRole.Arn'
-
+  SagemakerExecutionRole:
+    Description: Role to be assumed during Sagemaker training/deploy jobs
+    Value: !GetAtt 'SageMakerExecutionRole.Arn'
