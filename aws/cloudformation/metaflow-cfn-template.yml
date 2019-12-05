@@ -585,12 +585,12 @@ Resources:
                 - "batch:DescribeJobs"
                 - "batch:DescribeJobDefinitions"
                 - "batch:DescribeJobQueues"
+                - "batch:RegisterJobDefinition"
               Resource: '*'
             - Sid: DefinitionsPermissions
               Effect: Allow
               Action:
                 - "batch:SubmitJob"
-                - "batch:RegisterJobDefinition"
               Resource:
                 - !Ref "JobQueue"
                 - !Sub arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*:*
