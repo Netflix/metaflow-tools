@@ -977,21 +977,18 @@ Resources:
       UsagePlanId: !Ref ApiUsagePlan
 Outputs:
   ServiceUrl:
-    Description: "Externally Visible URL for Metadata Service (Open to Public Access) [METAFLOW_SERVICE_URL]"
+    Description: "URL for Metadata Service (Open to Public Access) [METAFLOW_SERVICE_URL]"
     Value: !Sub "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/api/"
   InternalServiceUrl:
-    Description: "Internal URL for Metadata Service (Only Accessible Inside VPC)"
+    Description: "URL for Metadata Service (Accessible in VPC) [METAFLOW_SERVICE_URL]"
     Value: !Sub "http://${NLB.DNSName}/"
   ApiKeyId:
     Condition: 'EnableAuth'
-    Description: "API Gateway Key ID for Metadata Service. Fetch Key from AWS Console [METAFLOW_SERVICE_AUTH_TOKEN]"
+    Description: "API Gateway Key ID for Metadata Service. Fetch Key from AWS Console [METAFLOW_SERVICE_AUTH_KEY]"
     Value: !Ref 'ApiKey'
   SageMakerNoteBookURL:
     Description: URL for SageMaker Notebook Instance
     Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/tree'
-  SageMakerNoteBookTerminalURL:
-    Description: Terminal URL for SageMaker Notebook Instance
-    Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/terminals/1'
   MetaflowDataStoreS3Url:
     Description: Amazon S3 URL for Metaflow DataStore [METAFLOW_DATASTORE_SYSROOT_S3]
     Value: !Sub "s3://${MetaflowS3Bucket}/metaflow"
@@ -1004,6 +1001,3 @@ Outputs:
   BatchJobQueueArn:
     Description: AWS Batch Job Queue ARN for Metaflow [METAFLOW_BATCH_JOB_QUEUE]
     Value: !Ref JobQueue
-  SagemakerExecutionRole:
-    Description: Role for Sagemaker Jobs
-    Value: !GetAtt 'SageMakerExecutionRole.Arn'
