@@ -287,9 +287,6 @@ Resources:
               Value: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSSecret, ':SecretString:password}}' ]]
             - Name: "MF_METADATA_DB_NAME"
               Value: "metaflow"
-            - !If ["EnableRole", { Name: "MF_USER_IAM_ROLE", Value: !GetAtt "MetaflowUserRole.Arn" }, !Ref "AWS::NoValue"]
-            - !If ["EnableRole", { Name: "MF_REGION", Value: !Ref "AWS::Region" }, !Ref "AWS::NoValue"]
-            - !If ["EnableRole", { Name: "MF_STS_ENDPOINT", Value: !Sub "https://sts.${AWS::Region}.amazonaws.com" }, !Ref "AWS::NoValue"]
           Cpu: !FindInMap ['ServiceInfo', 'ContainerCpu', 'value']
           Memory: !FindInMap ['ServiceInfo', 'ContainerMemory', 'value']
           Image: !FindInMap ['ServiceInfo', 'ImageUrl', 'value']
@@ -989,6 +986,10 @@ Outputs:
     Condition: 'EnableAuth'
     Description: "API Gateway Key ID for Metadata Service. Fetch Key from AWS Console [METAFLOW_SERVICE_AUTH_KEY]"
     Value: !Ref 'ApiKey'
+  MetaflowUserRoleArn:
+    Condition: 'EnableRole'
+    Description: "IAM Role for Metaflow Stack"
+    Value: !GetAtt "MetaflowUserRole.Arn"
   SageMakerNoteBookURL:
     Description: URL for SageMaker Notebook Instance
     Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/tree'
