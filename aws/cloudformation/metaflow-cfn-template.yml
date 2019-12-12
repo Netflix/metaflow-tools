@@ -287,6 +287,9 @@ Resources:
               Value: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSSecret, ':SecretString:password}}' ]]
             - Name: "MF_METADATA_DB_NAME"
               Value: "metaflow"
+            - !If ["EnableRole", { Name: "MF_USER_IAM_ROLE", Value: !GetAtt "MetaflowUserRole.Arn" }, !Ref "AWS::NoValue"]
+            - !If ["EnableRole", { Name: "MF_REGION", Value: !Ref "AWS::Region" }, !Ref "AWS::NoValue"]
+            - !If ["EnableRole", { Name: "MF_STS_ENDPOINT", Value: !Sub "https://sts.${AWS::Region}.amazonaws.com" }, !Ref "AWS::NoValue"]
           Cpu: !FindInMap ['ServiceInfo', 'ContainerCpu', 'value']
           Memory: !FindInMap ['ServiceInfo', 'ContainerMemory', 'value']
           Image: !FindInMap ['ServiceInfo', 'ImageUrl', 'value']
@@ -630,11 +633,11 @@ Resources:
             Fn::Base64:
               !Sub |
                 #!/bin/bash
-                pip install awscli
-                pip install requests
-                pip install --upgrade pip
-                echo 'export METAFLOW_DATASTORE_SYSROOT_S3=${MetaflowS3Bucket}' >> /etc/profile.d/jupyter-env.sh
+                echo 'export METAFLOW_DATASTORE_SYSROOT_S3=s3://${MetaflowS3Bucket}/metaflow/' >> /etc/profile.d/jupyter-env.sh
+                echo 'export METAFLOW_SERVICE_URL=https://${Api}.execute-api.${AWS::Region}.amazonaws.com/api/' >> /etc/profile.d/jupyter-env.sh
                 echo 'export AWS_DEFAULT_REGION=${AWS::Region}' >> /etc/profile.d/jupyter-env.sh
+                echo 'export METAFLOW_DEFAULT_METADATA=service' >> /etc/profile.d/jupyter-env.sh
+                sudo -H pip install metaflow
                 initctl restart jupyter-server --no-wait
       OnStart:
         - Content:
