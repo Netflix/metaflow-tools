@@ -6,7 +6,7 @@ This CloudFormation template deploys all the necessary infrastucture in AWS to s
 
 - **Amazon S3 Bucket** - Metaflow uses Amazon S3 as a centralized data repository for all data that's leveraged by and generated for its flows.  This template creates a dedicated private bucket and all appropriate permissions.
 
-- **AWS Batch Compute Environment** - In order to extend Metaflow's step processing capabilities to the cloud, AWS Batch provides a simple API that runs container-based jobs to completion on AWS Elastic Container Service.
+- **AWS Batch Compute Environment** - In order to extend Metaflow's compute capabilities to the cloud, AWS Batch provides a simple API that runs container-based jobs to completion on AWS Elastic Container Service.
 
 - **Amazon Sagemaker Notebook Instance** - Metaflow's API allows for easy access to flow results and information which can be cleanly displayed in a Jupyter notebook.  Amazon Sagemaker Notebook instances provide a fully managed notebook environment with dedicated and customizable compute resources.
 
