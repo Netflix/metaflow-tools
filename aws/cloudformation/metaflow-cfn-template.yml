@@ -546,11 +546,6 @@ Resources:
                   - !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
               - Effect: "Allow"
                 Action: 
-                  - "iam:PassRole"
-                Resource:
-                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*"
-              - Effect: "Allow"
-                Action: 
                   - "sagemaker:DescribeNotebook*"
                   - "sagemaker:StartNotebookInstance"
                   - "sagemaker:StopNotebookInstance"
