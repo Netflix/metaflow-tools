@@ -263,6 +263,26 @@ Resources:
               Condition:
                 StringNotEquals:
                   s3:authType: REST-HEADER
+  ECSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ECSInstanceRole
+  ECSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - 'ec2.amazonaws.com'
+          Action:
+            - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -526,8 +546,7 @@ Resources:
             - sts:AssumeRole
       Path: /
       Policies: 
-        - 
-          PolicyName: "Metaflow-Policy"
+        - PolicyName: "Metaflow-Policy"
           PolicyDocument: 
             Version: "2012-10-17"
             Statement: 
@@ -613,6 +632,94 @@ Resources:
               Effect: Allow
               Action: sagemaker:DescribeTrainingJob
               Resource: !Sub arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*
+        - PolicyName: AllowStepFunctions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: TasksAndExecutionsGlobal
+              Effect: Allow
+              Action:
+                - "states:SendTaskSuccess"
+                - "states:SendTaskFailure"
+                - "states:StopExecution"
+                - "states:SendTaskHeartbeat"
+              Resource: '*'
+            - Sid: Activities
+              Effect: Allow
+              Action:
+                - "states:DescribeActivity"
+                - "states:CreateActivity"
+                - "states:GetActivityTask"
+              Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:activity:*'
+            - Sid: StateMachines
+              Effect: Allow
+              Action:
+                - "states:DescribeStateMachine"
+                - "states:ListExecutions"
+                - "states:UpdateStateMachine"
+                - "states:StartExecution"
+                - "states:CreateStateMachine"
+              Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
+            - Sid: Executions
+              Effect: Allow
+              Action:
+                - "states:DescribeStateMachineForExecution"
+                - "states:DescribeExecution"
+                - "states:GetExecutionHistory"
+              Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:*:*'
+            - Sid: Tagging
+              Effect: Allow
+              Action:
+                - "states:UntagResource"
+                - "states:TagResource"
+                - "states:ListTagsForResource"
+              Resource:
+                - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:*:*'
+                - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
+                - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:activity:*'
+        - PolicyName: AllowEventBridge
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: RuleMaintenance
+                Effect: Allow
+                Action:
+                  - "events:DeleteRule"
+                  - "events:PutTargets"
+                  - "events:DescribeRule"
+                  - "events:RemoveTargets"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/[*/]*"
+              - Sid: PutRule
+                Effect: Allow
+                Action:
+                  - "events:PutRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/[*/]*"
+                Condition:
+                  StringEquals:
+                    events:source: "Scheduled Event"
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - events.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AllowStepFunctions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ExecuteStepFunction
+                Effect: Allow
+                Action:
+                  - 'states:StartExecution'
+                Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
   BasicNotebookInstanceLifecycleConfig:
     Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
     Properties:
@@ -871,7 +978,7 @@ Resources:
           - !Ref Subnet1
           - !Ref Subnet2
         MinvCpus: !Ref MinVCPUBatch
-        InstanceRole: ecsInstanceRole
+        InstanceRole: !GetAtt 'ECSInstanceProfile.Arn'
         InstanceTypes:
           - c4.large
           - c4.xlarge
