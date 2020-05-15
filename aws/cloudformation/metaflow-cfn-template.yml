@@ -2,38 +2,34 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Stack for complete deployment of Metaflow
 
 Parameters:
-  SagemakerInstance: 
-    Type: String
-    Default: ml.t2.xlarge
-    AllowedValues: ['ml.t2.large','ml.t2.xlarge','ml.t2.2xlarge']
-    Description: 'Instance type for Sagemaker Notebook.'
-  VPCCidr: 
+
+  VPCCidr:
     Type: String
     Default: 10.20.0.0/16
     Description: 'CIDR for the Metaflow VPC'
-  Subnet1Cidr: 
+  Subnet1Cidr:
     Type: String
     Default: 10.20.0.0/24
     Description: 'CIDR for Metaflow VPC Subnet 1'
-  Subnet2Cidr: 
+  Subnet2Cidr:
     Type: String
     Default: 10.20.1.0/24
     Description: 'CIDR for Metaflow VPC Subnet 2'
-  MaxVCPUBatch: 
+  MaxVCPUBatch:
     Type: Number
     Default: 64
     AllowedValues: [16,32,64,96]
     MinValue: 16
     MaxValue: 96
     Description: 'Maximum VCPUs for Batch Compute Environment [16-96]'
-  MinVCPUBatch: 
+  MinVCPUBatch:
     Type: Number
-    Default: 8
-    MinValue: 2
+    Default: 0
+    MinValue: 0
     MaxValue: 16
-    AllowedValues: [2,4,8,16]
+    AllowedValues: [0,2,4,8,16]
     Description: 'Maximum VCPUs for Batch Compute Environment [2-16]'
-  DesiredVCPUBatch: 
+  DesiredVCPUBatch:
     Type: Number
     Default: 8
     MinValue: 2
@@ -53,7 +49,7 @@ Parameters:
 
 Mappings:
   ServiceInfo:
-    StackName: 
+    StackName:
       value: 'metaflow-infrastructure'
     ServiceName:
       value: 'metadata-service'
@@ -206,6 +202,25 @@ Resources:
               - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
               - 'elasticloadbalancing:RegisterTargets'
             Resource: '*'
+
+  ECSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ECSInstanceRole
+  ECSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -355,6 +370,7 @@ Resources:
       DBInstanceClass: 'db.t2.small'
       DeleteAutomatedBackups: 'true'
       StorageType: 'gp2'
+      StorageEncrypted: 'true'
       Engine: 'postgres'
       EngineVersion: '11.5'
       MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSSecret, ':SecretString:username}}' ]]
@@ -379,7 +395,6 @@ Resources:
       TargetType: AWS::RDS::DBInstance
   MetaflowS3Bucket:
     Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Retain
     Properties:
       AccessControl: Private
       BucketEncryption:
@@ -401,116 +416,6 @@ Resources:
           IpProtocol: "TCP"
           FromPort: 8080
           ToPort: 8080
-  SageMakerExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          Effect: Allow
-          Principal:
-            Service:
-              - sagemaker.amazonaws.com
-          Action:
-            - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: IAM_PASS_ROLE
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              Sid: AllowPassRole
-              Effect: Allow
-              Action: iam:PassRole
-              Resource: '*'
-              Condition:
-                StringEquals:
-                  iam:PassedToService: sagemaker.amazonaws.com
-        - PolicyName: MISC_PERMISSIONS
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              Sid: MiscPermissions
-              Effect: Allow
-              Action:
-                - cloudwatch:PutMetricData
-                - ecr:GetDownloadUrlForLayer
-                - ecr:BatchGetImage
-                - ecr:GetAuthorizationToken
-                - ecr:BatchCheckLayerAvailability
-              Resource: '*'
-        - PolicyName: log_roles_policy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Sid: CreateLogStream
-              Effect: Allow
-              Action:
-                - logs:CreateLogStream
-              Resource: 
-                - !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/batch/job:log-stream:*' ] ]
-                - !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/sagemaker/NotebookInstances:log-stream:*' ] ]
-            - Sid: LogEvents
-              Effect: Allow
-              Action:
-                - logs:PutLogEvents
-                - logs:GetLogEvents
-              Resource: 
-                - !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/sagemaker/NotebookInstances:log-stream:', !Ref 'AWS::StackName', '-NotebookInstance-', '{{resolve:secretsmanager:', !Ref RandomString, ':SecretString:password}}', '/jupyter.log' ] ]
-                - !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/sagemaker/NotebookInstances:log-stream:', !Ref 'AWS::StackName', '-NotebookInstance-', '{{resolve:secretsmanager:', !Ref RandomString, ':SecretString:password}}', '/LifecycleConfigOnCreate' ] ]
-                - !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/batch/job:log-stream:job-queue-' ] ]
-            - Sid: LogGroup
-              Effect: Allow
-              Action: 
-                - logs:DescribeLogGroups
-                - logs:DescribeLogStreams
-                - logs:CreateLogGroup
-              Resource: '*'
-        - PolicyName: SageMakerPermissions
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              Sid: SageMakerNotebook
-              Effect: "Allow"
-              Action: 
-                - "sagemaker:DescribeNotebook*"
-                - "sagemaker:StartNotebookInstance"
-                - "sagemaker:StopNotebookInstance"
-                - "sagemaker:UpdateNotebookInstance"
-                - "sagemaker:CreatePresignedNotebookInstanceUrl"
-              Resource:
-                - !Sub "arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:notebook-instance/${AWS::StackName}*"
-                - !Sub "arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:notebook-instance-lifecycle-config/basic*"
-        - PolicyName: CustomS3ListAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              Sid: BucketAccess
-              Effect: Allow
-              Action: s3:ListBucket
-              Resource: !GetAtt 'MetaflowS3Bucket.Arn'
-        - PolicyName: CustomS3Access
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              Sid: ObjectAccess
-              Effect: Allow
-              Action:
-                - s3:PutObject
-                - s3:GetObject
-                - s3:DeleteObject
-              Resource: !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
-        - PolicyName: DenyPresigned
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              Sid: DenyPresigned
-              Effect: Deny
-              Action: s3:*
-              Resource: '*'
-              Condition:
-                StringNotEquals:
-                  s3:authType: REST-HEADER
   MetaflowUserRole:
     Condition: 'EnableRole'
     Type: AWS::IAM::Role
@@ -525,27 +430,32 @@ Resources:
           Action:
             - sts:AssumeRole
       Path: /
-      Policies: 
-        - 
+      Policies:
+        -
           PolicyName: "Metaflow-Policy"
-          PolicyDocument: 
+          PolicyDocument:
             Version: "2012-10-17"
-            Statement: 
+            Statement:
               - Effect: "Allow"
-                Action: 
+                Action:
                   - "cloudformation:DescribeStacks"
                   - "cloudformation:*Stack"
                   - "cloudformation:*ChangeSet"
-                Resource: 
+                Resource:
                   - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}-*"
               - Effect: "Allow"
-                Action: 
+                Action:
                   - "s3:*Object"
                 Resource:
                   - !GetAtt 'MetaflowS3Bucket.Arn'
                   - !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
               - Effect: "Allow"
-                Action: 
+                Action:
+                  - "iam:PassRole"
+                Resource:
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*"
+              - Effect: "Allow"
+                Action:
                   - "sagemaker:DescribeNotebook*"
                   - "sagemaker:StartNotebookInstance"
                   - "sagemaker:StopNotebookInstance"
@@ -555,7 +465,7 @@ Resources:
                   - !Sub "arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:notebook-instance/${AWS::StackName}-*"
                   - !Sub "arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:notebook-instance-lifecycle-config/basic*"
               - Effect: "Allow"
-                Action: 
+                Action:
                   - "iam:PassRole"
                 Resource:
                   - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*"
@@ -613,40 +523,6 @@ Resources:
               Effect: Allow
               Action: sagemaker:DescribeTrainingJob
               Resource: !Sub arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*
-  BasicNotebookInstanceLifecycleConfig:
-    Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
-    Properties:
-      OnCreate:
-        - Content:
-            Fn::Base64:
-              !Sub |
-                #!/bin/bash
-                echo 'export METAFLOW_DATASTORE_SYSROOT_S3=s3://${MetaflowS3Bucket}/metaflow/' >> /etc/profile.d/jupyter-env.sh
-                echo 'export METAFLOW_DATATOOLS_S3ROOT=s3://${MetaflowS3Bucket}/data/' >> /etc/profile.d/jupyter-env.sh
-                echo 'export METAFLOW_SERVICE_URL=http://${NLB.DNSName}/' >> /etc/profile.d/jupyter-env.sh
-                echo 'export AWS_DEFAULT_REGION=${AWS::Region}' >> /etc/profile.d/jupyter-env.sh
-                echo 'export METAFLOW_DEFAULT_DATASTORE=s3' >> /etc/profile.d/jupyter-env.sh
-                echo 'export METAFLOW_DEFAULT_METADATA=service' >> /etc/profile.d/jupyter-env.sh
-                initctl restart jupyter-server --no-wait
-      OnStart:
-        - Content:
-            Fn::Base64:
-              !Sub |
-                #!/bin/bash
-                set -e
-                sudo -u ec2-user -i <<'EOF'
-                echo "THIS IS A PLACE HOLDER TO EXECUTE - USER LEVEL" >> ~/.customrc
-                EOF
-  SageMakerNotebookInstance:
-    Type: AWS::SageMaker::NotebookInstance
-    Properties:
-      NotebookInstanceName: !Join ['', [!Ref 'AWS::StackName', '-NotebookInstance-', '{{resolve:secretsmanager:', !Ref RandomString, ':SecretString:password}}' ]]
-      InstanceType: !Ref SagemakerInstance
-      RoleArn: !GetAtt 'SageMakerExecutionRole.Arn'
-      LifecycleConfigName: !GetAtt 'BasicNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleConfigName'
-      SubnetId: !Ref Subnet1
-      SecurityGroupIds: 
-        - !Ref 'SagemakerSecurityGroup'
   RandomString:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -761,7 +637,7 @@ Resources:
               Resource: '*'
               Condition:
                 StringEquals:
-                  iam:PassedToService: 
+                  iam:PassedToService:
                     - ec2.amazonaws.com
                     - ec2.amazonaws.com.cn
                     - ecs-tasks.amazonaws.com
@@ -857,6 +733,8 @@ Resources:
                 StringEquals:
                   ec2:CreateAction: RunInstances
   ComputeEnvironment:
+    DependsOn:
+      - ECSInstanceProfile
     Type: AWS::Batch::ComputeEnvironment
     Properties:
       Type: MANAGED
@@ -871,8 +749,10 @@ Resources:
           - !Ref Subnet1
           - !Ref Subnet2
         MinvCpus: !Ref MinVCPUBatch
-        InstanceRole: ecsInstanceRole
+        InstanceRole:  !GetAtt 'ECSInstanceProfile.Arn'
         InstanceTypes:
+          - p2
+          - p3
           - c4.large
           - c4.xlarge
           - c4.2xlarge
@@ -881,7 +761,8 @@ Resources:
         DesiredvCpus: !Ref DesiredVCPUBatch
       State: ENABLED
   JobQueue:
-    DependsOn: ComputeEnvironment
+    DependsOn:
+      - ComputeEnvironment
     Type: AWS::Batch::JobQueue
     Properties:
       ComputeEnvironmentOrder:
@@ -953,7 +834,7 @@ Resources:
       - Api
       - ApiDeployment
     Properties:
-      ApiStages: 
+      ApiStages:
       - ApiId: !Ref Api
         Stage: api
       UsagePlanName: !Join ["", [{"Ref": "AWS::StackName"}, "-usage-plan"]]
@@ -968,6 +849,9 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref ApiUsagePlan
 Outputs:
+  MetaflowS3Bucket:
+    Description: The Metaflow S3 bucket name
+    Value: !Ref MetaflowS3Bucket
   MetaflowDataStoreS3Url:
     Description: Amazon S3 URL for Metaflow DataStore [METAFLOW_DATASTORE_SYSROOT_S3]
     Value: !Sub "s3://${MetaflowS3Bucket}/metaflow"
@@ -994,6 +878,3 @@ Outputs:
     Condition: 'EnableRole'
     Description: "IAM Role for Metaflow Stack"
     Value: !GetAtt "MetaflowUserRole.Arn"
-  SageMakerNoteBookURL:
-    Description: URL for SageMaker Notebook Instance
-    Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/tree'
