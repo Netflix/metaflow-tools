@@ -1104,3 +1104,6 @@ Outputs:
   SageMakerNoteBookURL:
     Description: URL for SageMaker Notebook Instance
     Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/tree'
+  EventBridgeRoleArn:
+    Description: "IAM Role for Event Bridge"
+    Value: !GetAtt "EventBridgeRole.Arn"
