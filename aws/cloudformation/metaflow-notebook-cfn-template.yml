@@ -298,7 +298,7 @@ Resources:
               metaflow_config_file=$METAFLOW_HOME/config_$METAFLOW_PROFILE.json
 
               # it is hard to do multiline strings in CF, therefore we are appending to the metaflow config
-              echo '{ ' >> $metaflow_config_file
+              echo '{ ' > $metaflow_config_file
               echo '"METAFLOW_DEFAULT_DATASTORE": "s3",' >> $metaflow_config_file
               echo '"METAFLOW_DATASTORE_SYSROOT_S3": "${MetaflowDatastoreSysrootS3}",' >> $metaflow_config_file
               echo '"METAFLOW_DATATOOLS_SYSROOT_S3": "${MetaflowDatatoolsS3Root}",' >> $metaflow_config_file
