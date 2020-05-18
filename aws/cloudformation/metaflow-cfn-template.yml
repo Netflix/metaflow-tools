@@ -643,6 +643,7 @@ Resources:
                 - "states:SendTaskFailure"
                 - "states:StopExecution"
                 - "states:SendTaskHeartbeat"
+                - "states:ListStateMachines"
               Resource: '*'
             - Sid: Activities
               Effect: Allow
@@ -688,12 +689,13 @@ Resources:
                   - "events:PutTargets"
                   - "events:DescribeRule"
                   - "events:RemoveTargets"
-                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/[*/]*"
+                  - "events:DisableRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*"
               - Sid: PutRule
                 Effect: Allow
                 Action:
                   - "events:PutRule"
-                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/[*/]*"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*"
                 Condition:
                   StringEquals:
                     events:source: "Scheduled Event"
@@ -720,6 +722,73 @@ Resources:
                 Action:
                   - 'states:StartExecution'
                 Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - states.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: BatchPerms
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: JobsPermissions
+              Effect: Allow
+              Action:
+                - "batch:TerminateJob"
+                - "batch:DescribeJobs"
+                - "batch:DescribeJobDefinitions"
+                - "batch:DescribeJobQueues"
+                - "batch:RegisterJobDefinition"
+              Resource: '*'
+            - Sid: DefinitionsPermissions
+              Effect: Allow
+              Action:
+                - "batch:SubmitJob"
+              Resource:
+                - !Ref "JobQueue"
+                - !Sub arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*:*
+        - PolicyName: CustomS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: BucketAccess
+              Effect: Allow
+              Action: s3:ListBucket
+              Resource: !GetAtt 'MetaflowS3Bucket.Arn'
+            - Sid: ObjectAccess
+              Effect: "Allow"
+              Action: 
+                - "s3:*Object"
+              Resource:
+                - !GetAtt 'MetaflowS3Bucket.Arn'
+                - !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
+        - PolicyName: AllowEventBridge
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: RuleMaintenance
+                Effect: Allow
+                Action:
+                  - "events:PutTargets"
+                  - "events:DescribeRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForBatchJobsRule"
+              - Sid: PutRule
+                Effect: Allow
+                Action:
+                  - "events:PutRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForBatchJobsRule"
+                Condition:
+                  StringEquals: 
+                    events:detail-type: "Batch Job State Change"
   BasicNotebookInstanceLifecycleConfig:
     Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
     Properties:
