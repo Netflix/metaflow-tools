@@ -1159,6 +1159,9 @@ Resources:
       KeySchema:
         - AttributeName: "pathspec"
           KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 Outputs:
   MetaflowDataStoreS3Url:
     Description: Amazon S3 URL for Metaflow DataStore [METAFLOW_DATASTORE_SYSROOT_S3]
