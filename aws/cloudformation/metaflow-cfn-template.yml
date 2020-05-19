@@ -639,45 +639,16 @@ Resources:
             - Sid: TasksAndExecutionsGlobal
               Effect: Allow
               Action:
-                - "states:SendTaskSuccess"
-                - "states:SendTaskFailure"
-                - "states:StopExecution"
-                - "states:SendTaskHeartbeat"
                 - "states:ListStateMachines"
               Resource: '*'
-            - Sid: Activities
-              Effect: Allow
-              Action:
-                - "states:DescribeActivity"
-                - "states:CreateActivity"
-                - "states:GetActivityTask"
-              Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:activity:*'
             - Sid: StateMachines
               Effect: Allow
               Action:
                 - "states:DescribeStateMachine"
-                - "states:ListExecutions"
                 - "states:UpdateStateMachine"
                 - "states:StartExecution"
                 - "states:CreateStateMachine"
               Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
-            - Sid: Executions
-              Effect: Allow
-              Action:
-                - "states:DescribeStateMachineForExecution"
-                - "states:DescribeExecution"
-                - "states:GetExecutionHistory"
-              Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:*:*'
-            - Sid: Tagging
-              Effect: Allow
-              Action:
-                - "states:UntagResource"
-                - "states:TagResource"
-                - "states:ListTagsForResource"
-              Resource:
-                - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:*:*'
-                - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
-                - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:activity:*'
         - PolicyName: AllowEventBridge
           PolicyDocument:
             Version: '2012-10-17'
@@ -685,10 +656,7 @@ Resources:
               - Sid: RuleMaintenance
                 Effect: Allow
                 Action:
-                  - "events:DeleteRule"
                   - "events:PutTargets"
-                  - "events:DescribeRule"
-                  - "events:RemoveTargets"
                   - "events:DisableRule"
                 Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*"
               - Sid: PutRule
@@ -697,8 +665,8 @@ Resources:
                   - "events:PutRule"
                 Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*"
                 Condition:
-                  StringEquals:
-                    events:source: "Scheduled Event"
+                  "Null":
+                    events:source: true
   EventBridgeRole:
     Type: AWS::IAM::Role
     Properties:
@@ -771,6 +739,22 @@ Resources:
               Resource:
                 - !GetAtt 'MetaflowS3Bucket.Arn'
                 - !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
+        - PolicyName: AllowCloudwatch
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: CloudwatchLogDelivery
+                Effect: Allow
+                Action:
+                  - "logs:CreateLogDelivery"
+                  - "logs:GetLogDelivery"
+                  - "logs:UpdateLogDelivery"
+                  - "logs:DeleteLogDelivery"
+                  - "logs:ListLogDeliveries"
+                  - "logs:PutResourcePolicy"
+                  - "logs:DescribeResourcePolicies"
+                  - "logs:DescribeLogGroups"
+                Resource: '*'
         - PolicyName: AllowEventBridge
           PolicyDocument:
             Version: '2012-10-17'
@@ -789,6 +773,17 @@ Resources:
                 Condition:
                   StringEquals: 
                     events:detail-type: "Batch Job State Change"
+        - PolicyName: DynamoDB
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: Items
+              Effect: Allow
+              Action:
+                - "dynamodb:PutItem"
+                - "dynamodb:GetItem"
+                - "dynamodb:UpdateItem"
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StepFunctionsStateDDB}
   BasicNotebookInstanceLifecycleConfig:
     Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
     Properties:
@@ -913,6 +908,17 @@ Resources:
               Condition:
                 StringEquals:
                   iam:PassedToService: sagemaker.amazonaws.com
+        - PolicyName: DynamoDB
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: Items
+              Effect: Allow
+              Action:
+                - "dynamodb:PutItem"
+                - "dynamodb:GetItem"
+                - "dynamodb:UpdateItem"
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StepFunctionsStateDDB}
   BatchExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1143,6 +1149,16 @@ Resources:
       KeyId: !Ref ApiKey
       KeyType: API_KEY
       UsagePlanId: !Ref ApiUsagePlan
+  StepFunctionsStateDDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "pathspec"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "pathspec"
+          KeyType: "HASH"
 Outputs:
   MetaflowDataStoreS3Url:
     Description: Amazon S3 URL for Metaflow DataStore [METAFLOW_DATASTORE_SYSROOT_S3]
@@ -1174,5 +1190,11 @@ Outputs:
     Description: URL for SageMaker Notebook Instance
     Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/tree'
   EventBridgeRoleArn:
-    Description: "IAM Role for Event Bridge"
+    Description: "IAM Role for Event Bridge [METAFLOW_EVENTS_SFN_ACCESS_IAM_ROLE]"
     Value: !GetAtt "EventBridgeRole.Arn"
+  StepFunctionsRoleArn:
+    Description: "IAM Role for Step Functions [METAFLOW_SFN_IAM_ROLE]"
+    Value: !GetAtt "StepFunctionsRole.Arn"
+  DDBTableName:
+    Description: "DynamoDB Table Name [METAFLOW_SFN_DYNAMO_DB_TABLE]"
+    Value: !Ref StepFunctionsStateDDB
