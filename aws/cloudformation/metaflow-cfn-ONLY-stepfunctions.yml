@@ -39,41 +39,6 @@ Resources:
             - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: BatchPerms
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Sid: JobsPermissions
-              Effect: Allow
-              Action:
-                - "batch:TerminateJob"
-                - "batch:DescribeJobs"
-                - "batch:DescribeJobDefinitions"
-                - "batch:DescribeJobQueues"
-                - "batch:RegisterJobDefinition"
-              Resource: '*'
-            - Sid: DefinitionsPermissions
-              Effect: Allow
-              Action:
-                - "batch:SubmitJob"
-              Resource:
-                - !Ref "JobQueue"
-                - !Sub arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*:*
-        - PolicyName: CustomS3Access
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Sid: BucketAccess
-              Effect: Allow
-              Action: s3:ListBucket
-              Resource: !GetAtt 'MetaflowS3Bucket.Arn'
-            - Sid: ObjectAccess
-              Effect: "Allow"
-              Action: 
-                - "s3:*Object"
-              Resource:
-                - !GetAtt 'MetaflowS3Bucket.Arn'
-                - !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
         - PolicyName: AllowCloudwatch
           PolicyDocument:
             Version: '2012-10-17'
