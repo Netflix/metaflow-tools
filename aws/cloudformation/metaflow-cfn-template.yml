@@ -29,16 +29,16 @@ Parameters:
   MinVCPUBatch: 
     Type: Number
     Default: 8
-    MinValue: 2
+    MinValue: 0
     MaxValue: 16
-    AllowedValues: [2,4,8,16]
+    AllowedValues: [0,2,4,8,16]
     Description: 'Maximum VCPUs for Batch Compute Environment [2-16]'
   DesiredVCPUBatch: 
     Type: Number
     Default: 8
-    MinValue: 2
+    MinValue: 0
     MaxValue: 16
-    AllowedValues: [2,4,8,16]
+    AllowedValues: [0,2,4,8,16]
     Description: 'Desired Starting VCPUs for Batch Compute Environment [2-16]'
   CustomRole:
     Type: String
@@ -312,6 +312,16 @@ Resources:
           Image: !FindInMap ['ServiceInfo', 'ImageUrl', 'value']
           PortMappings:
             - ContainerPort: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Join ['', ['/ecs/', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: 'ecs'
+  MetadataServiceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', ['/ecs/', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
   ECSFargateService:
     Type: AWS::ECS::Service
     Properties:
