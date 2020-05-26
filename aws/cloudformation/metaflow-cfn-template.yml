@@ -658,6 +658,8 @@ Resources:
                 - "states:UpdateStateMachine"
                 - "states:StartExecution"
                 - "states:CreateStateMachine"
+                - "states:ListExecutions"
+                - "states:StopExecution"
               Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
         - PolicyName: AllowEventBridge
           PolicyDocument:
