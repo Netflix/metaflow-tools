@@ -912,18 +912,6 @@ Resources:
               Effect: Allow
               Action: "iam:PassRole"
               Resource: !GetAtt 'BatchS3TaskRole.Arn'
-        - PolicyName: CloudFormationPermissions
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              Sid: "AllowCloudFormation"
-              Effect: Allow
-              Action:
-                - "cloudformation:DescribeStacks"
-                - "cloudformation:DescribeStackEvents"
-                - "cloudformation:DescribeStackResource"
-                - "cloudformation:DescribeStackResources"
-              Resource: "*"
         - PolicyName: EcrPermissions
           PolicyDocument:
             Version: "2012-10-17"
@@ -1120,10 +1108,10 @@ Resources:
               # it is hard to do multiline strings in CF, therefore we are appending to the metaflow config
               echo '{ ' > $metaflow_config_file
 
-              # retrieve the API key, if APIBasicAuth is set
+              # due to restrictions regarding IAM policies and conditional resources like the API key, we are not 
+              # retrieving automatically here. 
               if [[ "${APIBasicAuth}" == "true" ]]; then 
-                service_auth_key=`aws apigateway get-api-key --api-key ${ApiKey} --include-value | jq -r '.value'`
-                echo "\"METAFLOW_SERVICE_AUTH_KEY\": \"$service_auth_key\"," >> $metaflow_config_file
+                echo "\"METAFLOW_SERVICE_AUTH_KEY\": \"PASTE_ACCESS_KEY_HERE\"," >> $metaflow_config_file
               fi
 
               echo '"METAFLOW_DEFAULT_DATASTORE": "s3",' >> $metaflow_config_file
