@@ -50,6 +50,11 @@ Parameters:
     Default: 'false'
     AllowedValues: ['false', 'true']
     Description: 'Enable basic auth for API Gateway? (requires key export)'
+  EnableSagemaker:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['false', 'true']
+    Description: 'Enable Sagemaker Notebooks'
 
 Mappings:
   ServiceInfo:
@@ -76,6 +81,7 @@ Mappings:
 Conditions:
   EnableAuth: !Equals [ !Ref APIBasicAuth, 'true']
   EnableRole: !Equals [ !Ref CustomRole, 'true']
+  EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -315,13 +321,13 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Join ['', ['/ecs/', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
+              awslogs-group: !Join ['', ['/ecs/', !Ref 'AWS::StackName', '-', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
               awslogs-region: !Ref 'AWS::Region'
               awslogs-stream-prefix: 'ecs'
   MetadataServiceLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Join ['', ['/ecs/', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
+      LogGroupName: !Join ['', ['/ecs/', !Ref 'AWS::StackName', '-', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
   ECSFargateService:
     Type: AWS::ECS::Service
     Properties:
@@ -422,6 +428,7 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
   SagemakerSecurityGroup:
+    Condition: 'EnableSagemaker'
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: 'Security Group for Sagemaker'
@@ -432,6 +439,7 @@ Resources:
           FromPort: 8080
           ToPort: 8080
   SageMakerExecutionRole:
+    Condition: 'EnableSagemaker'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -797,6 +805,7 @@ Resources:
                 - "dynamodb:UpdateItem"
               Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StepFunctionsStateDDB}
   BasicNotebookInstanceLifecycleConfig:
+    Condition: 'EnableSagemaker'
     Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
     Properties:
       OnCreate:
@@ -821,6 +830,7 @@ Resources:
                 echo "THIS IS A PLACE HOLDER TO EXECUTE - USER LEVEL" >> ~/.customrc
                 EOF
   SageMakerNotebookInstance:
+    Condition: 'EnableSagemaker'
     Type: AWS::SageMaker::NotebookInstance
     Properties:
       NotebookInstanceName: !Join ['', [!Ref 'AWS::StackName', '-NotebookInstance-', '{{resolve:secretsmanager:', !Ref RandomString, ':SecretString:password}}' ]]
@@ -1059,7 +1069,7 @@ Resources:
       ComputeResources:
         MaxvCpus: !Ref MaxVCPUBatch
         SecurityGroupIds:
-          - !Ref SagemakerSecurityGroup
+          - !GetAtt VPC.DefaultSecurityGroup
         Type: EC2
         Subnets:
           - !Ref Subnet1
@@ -1202,6 +1212,7 @@ Outputs:
     Description: "IAM Role for Metaflow Stack"
     Value: !GetAtt "MetaflowUserRole.Arn"
   SageMakerNoteBookURL:
+    Condition: 'EnableSagemaker'
     Description: URL for SageMaker Notebook Instance
     Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/tree'
   EventBridgeRoleArn:
