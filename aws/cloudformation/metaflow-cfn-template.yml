@@ -351,6 +351,111 @@ Resources:
         - ContainerName: !FindInMap ['ServiceInfo', 'ServiceName', 'value']
           ContainerPort: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
           TargetGroupArn: !Ref 'NLBTargetGroup'
+  MigrationTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Join ['-', [!Ref 'AWS::StackName', 'db-migration']]
+      Cpu: 1024
+      Memory: 2048
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref 'ECSTaskExecutionRole'
+      TaskRoleArn: !GetAtt 'MetadataSvcECSTaskRole.Arn'
+      ContainerDefinitions:
+        - Name: 'db-migration'
+          Cpu: 1024
+          Memory: 2048
+          Image: 'queueburt/simplebatch:v0.5'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Join ['', ['/ecs/', !Ref 'AWS::StackName', '-', 'db-migration']]
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: 'ecs'
+  MigrationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', ['/ecs/', !Ref 'AWS::StackName', '-', 'db-migration']]
+  LambdaECSExecuteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: Cloudwatch
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: CreateLogGroup
+              Effect: Allow
+              Action: logs:CreateLogGroup
+              Resource: !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':*' ] ]
+            - Sid: LogEvents
+              Effect: Allow
+              Action:
+                - logs:PutLogEvents
+                - logs:CreateLogStream
+              Resource: !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/lambda/', !Ref 'AWS::StackName', '-migrate-db:*'] ]
+        - PolicyName: ECS
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: ECSTasks
+              Effect: Allow
+              Action:
+                - "ecs:RunTask"
+              Resource: 
+                - !Ref MigrationTaskDefinition
+            - Sid: PassRole
+              Effect: Allow
+              Action: 
+                - "iam:PassRole"
+              Resource:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*"
+  ExecuteDBMigration:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.7
+      Role: !GetAtt LambdaECSExecuteRole.Arn
+      Handler: index.handler
+      Environment:
+        Variables:
+          ECS_CLUSTER: !Ref ECSCluster
+          ECS_TASK_DEF: !Ref MigrationTaskDefinition
+          ECS_VPC_SUBNET: !Ref Subnet1
+      Code:
+        ZipFile: |
+          import boto3, os
+
+          def handler(event, context):
+            client = boto3.client('ecs')
+            response = client.run_task(
+            cluster=os.environ.get('ECS_CLUSTER'),
+            launchType = 'FARGATE',
+            taskDefinition=os.environ.get('ECS_TASK_DEF'),
+            count = 1,
+            platformVersion='LATEST',
+            networkConfiguration={
+                  'awsvpcConfiguration': {
+                      'subnets': [
+                          os.environ.get('ECS_VPC_SUBNET')
+                      ],
+                      'assignPublicIp': 'ENABLED'
+                  }
+              })
+              
+            return str(response)
+      Description: Trigger DB Migration
+      FunctionName: !Join ['-', [!Ref 'AWS::StackName', 'migrate-db'] ]
   NLBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
