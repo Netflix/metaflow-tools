@@ -64,6 +64,8 @@ Mappings:
       value: 'metadata-service'
     ImageUrl:
       value: 'netflixoss/metaflow_metadata_service'
+    DBMigrateImage:
+      value: 'queueburt/simplebatch:v0.5'
     ContainerPort:
       value: 8080
     ContainerCpu:
@@ -366,7 +368,7 @@ Resources:
         - Name: 'db-migration'
           Cpu: 1024
           Memory: 2048
-          Image: 'queueburt/simplebatch:v0.5'
+          Image: !FindInMap ['ServiceInfo', 'DBMigrateImage', 'value']
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -411,16 +413,15 @@ Resources:
             Statement:
             - Sid: ECSTasks
               Effect: Allow
-              Action:
-                - "ecs:RunTask"
-              Resource: 
-                - !Ref MigrationTaskDefinition
+              Action: "ecs:RunTask"
+              Condition:
+                ArnEquals:
+                  ecs:cluster: !GetAtt 'ECSCluster.Arn'
+              Resource: !Ref MigrationTaskDefinition
             - Sid: PassRole
               Effect: Allow
-              Action: 
-                - "iam:PassRole"
-              Resource:
-                - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*"
+              Action: "iam:PassRole"
+              Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*"
   ExecuteDBMigration:
     Type: AWS::Lambda::Function
     Properties:
@@ -792,6 +793,14 @@ Resources:
                 Condition:
                   "Null":
                     events:source: true
+        - PolicyName: AllowLambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: Execute
+                Effect: Allow
+                Action: "lambda:InvokeFunction"
+                Resource: !GetAtt ExecuteDBMigration.Arn
   EventBridgeRole:
     Type: AWS::IAM::Role
     Properties:
