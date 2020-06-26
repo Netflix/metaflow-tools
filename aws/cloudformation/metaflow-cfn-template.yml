@@ -1338,3 +1338,6 @@ Outputs:
   DDBTableName:
     Description: "DynamoDB Table Name [METAFLOW_SFN_DYNAMO_DB_TABLE]"
     Value: !Ref StepFunctionsStateDDB
+  MigrationFunctionName:
+    Description: "Name of DB Migration Function"
+    Value: !Ref ExecuteDBMigration
