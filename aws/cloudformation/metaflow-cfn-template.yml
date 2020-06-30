@@ -39,7 +39,7 @@ Parameters:
     MinValue: 0
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
-    Description: 'Desired Starting VCPUs for Batch Compute Environment [2-16]'
+    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16]'
   CustomRole:
     Type: String
     Default: 'false'
