@@ -157,6 +157,15 @@ Resources:
       FromPort: 8080
       ToPort: 8080
       CidrIp: !GetAtt 'VPC.CidrBlock'
+  NLBIngressRuleDBMigrate:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+        Description: 'Allow API Calls Internally'
+        GroupId: !Ref FargateSecurityGroup
+        IpProtocol: tcp
+        FromPort: 8082
+        ToPort: 8082
+        CidrIp: !GetAtt 'VPC.CidrBlock'
   FargateInternalRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -182,6 +191,17 @@ Resources:
           Type: 'forward'
       LoadBalancerArn: !Ref 'NLB'
       Port: 80
+      Protocol: TCP
+  NLBListenerDBMigrate:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - NLB
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref 'NLBTargetGroupDBMigrate'
+          Type: 'forward'
+      LoadBalancerArn: !Ref 'NLB'
+      Port: 8082
       Protocol: TCP
   ECSRole:
     Type: AWS::IAM::Role
@@ -318,6 +338,7 @@ Resources:
           Image: !FindInMap ['ServiceInfo', 'ImageUrl', 'value']
           PortMappings:
             - ContainerPort: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
+            - ContainerPort: 8082
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -351,6 +372,9 @@ Resources:
         - ContainerName: !FindInMap ['ServiceInfo', 'ServiceName', 'value']
           ContainerPort: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
           TargetGroupArn: !Ref 'NLBTargetGroup'
+        - ContainerName: !FindInMap ['ServiceInfo', 'ServiceName', 'value']
+          ContainerPort: 8082
+          TargetGroupArn: !Ref 'NLBTargetGroupDBMigrate'
   LambdaECSExecuteRole:
     Type: AWS::IAM::Role
     Properties:
@@ -398,20 +422,32 @@ Resources:
       Handler: index.handler
       Environment:
         Variables:
-          MD_LB_ADDRESS: !Join ['', ['http://', !GetAtt 'NLB.DNSName', '/ping'] ]
+          MD_LB_ADDRESS: !Join ['', ['http://', !GetAtt 'NLB.DNSName', ':8082'] ]
       Code:
         ZipFile: |
-          import os
+          import os, json
           from urllib import request
-
+          
           def handler(event, context):
-            with request.urlopen(os.environ.get('MD_LB_ADDRESS')) as metadata:
-              response = metadata.read()
-                
+            response = {}
+            status_endpoint = "{}/db_schema_status".format(os.environ.get('MD_LB_ADDRESS'))
+            upgrade_endpoint = "{}/upgrade".format(os.environ.get('MD_LB_ADDRESS'))
+            
+            with request.urlopen(status_endpoint) as status:
+              response['init-status'] = json.loads(status.read())
+            
+            upgrade_patch = request.Request(upgrade_endpoint, method='PATCH')
+            with request.urlopen(upgrade_patch) as upgrade:
+              response['upgrade-result'] = upgrade.read().decode()
+              
+            with request.urlopen(status_endpoint) as status:
+              response['final-status'] = json.loads(status.read())
+          
+            print(response)
             return(response)
       Description: Trigger DB Migration
       FunctionName: !Join ['-', [!Ref 'AWS::StackName', 'migrate-db'] ]
-      Timeout: 10
+      Timeout: 900
       VpcConfig: 
         SecurityGroupIds: 
           - !GetAtt VPC.DefaultSecurityGroup
@@ -427,6 +463,18 @@ Resources:
       HealthyThresholdCount: 2
       TargetType: ip
       Port: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
+      Protocol: TCP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref 'VPC'
+  NLBTargetGroupDBMigrate:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckProtocol: TCP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Port: 8082
       Protocol: TCP
       UnhealthyThresholdCount: 2
       VpcId: !Ref 'VPC'
@@ -473,7 +521,7 @@ Resources:
         SecretStringTemplate: '{"username": "master"}'
         GenerateStringKey: "password"
         PasswordLength: 16
-        ExcludeCharacters: '"@/\'
+        ExcludeCharacters: "\"\\@/'"
   SecretRDSInstanceAttachment:
     Type: "AWS::SecretsManager::SecretTargetAttachment"
     Properties:
@@ -1172,6 +1220,12 @@ Resources:
       ParentId: !GetAtt Api.RootResourceId
       RestApiId: !Ref Api
       PathPart: '{proxy+}'
+  DBApiResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt Api.RootResourceId
+      RestApiId: !Ref Api
+      PathPart: 'db_schema_status'
   VpcLink:
       Type: AWS::ApiGateway::VpcLink
       Properties:
@@ -1198,6 +1252,23 @@ Resources:
         IntegrationHttpMethod: ANY
         Type: HTTP_PROXY
         Uri: !Join ['', ['http://', !GetAtt 'NLB.DNSName', '/{proxy}'] ]
+        PassthroughBehavior: WHEN_NO_MATCH
+        IntegrationResponses:
+          - StatusCode: 200
+  DBMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: GET
+      ApiKeyRequired: !If [ EnableAuth, 'true', !Ref "AWS::NoValue" ]
+      ResourceId: !Ref DBApiResource
+      RestApiId: !Ref Api
+      AuthorizationType: NONE
+      Integration:
+        ConnectionType: VPC_LINK
+        ConnectionId: !Ref VpcLink
+        IntegrationHttpMethod: GET
+        Type: HTTP_PROXY
+        Uri: !Join ['', ['http://', !GetAtt 'NLB.DNSName', ':8082/db_schema_status'] ]
         PassthroughBehavior: WHEN_NO_MATCH
         IntegrationResponses:
           - StatusCode: 200
