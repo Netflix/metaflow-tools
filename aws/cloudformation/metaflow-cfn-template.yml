@@ -472,6 +472,7 @@ Resources:
       HealthCheckIntervalSeconds: 10
       HealthCheckProtocol: TCP
       HealthCheckTimeoutSeconds: 10
+      HealthCheckPort: 8080
       HealthyThresholdCount: 2
       TargetType: ip
       Port: 8082
