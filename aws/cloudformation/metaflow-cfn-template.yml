@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Stack for complete deployment of Metaflow
+Description: Stack for complete deployment of Metaflow (v2.0.0)
 
 Parameters:
   SagemakerInstance: 
@@ -61,7 +61,7 @@ Mappings:
     StackName: 
       value: 'metaflow-infrastructure'
     ServiceName:
-      value: 'metadata-service'
+      value: 'metadata-service-v2.0.0'
     ImageUrl:
       value: 'netflixoss/metaflow_metadata_service'
     ContainerPort:
@@ -1181,7 +1181,7 @@ Resources:
     Properties:
       Type: MANAGED
       ServiceRole: !GetAtt 'BatchExecutionRole.Arn'
-      ComputeEnvironmentName: !Join [ "-", [ 'batch-compute-env', !Ref 'AWS::StackName' ] ]
+      ComputeEnvironmentName: !Join [ "-", [ 'batch-compute-v2', !Ref 'AWS::StackName' ] ]
       ComputeResources:
         MaxvCpus: !Ref MaxVCPUBatch
         SecurityGroupIds:
