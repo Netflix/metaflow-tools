@@ -61,7 +61,7 @@ Mappings:
     StackName: 
       value: 'metaflow-infrastructure'
     ServiceName:
-      value: 'metadata-service-v2.0.0'
+      value: 'metadata-service-v2'
     ImageUrl:
       value: 'netflixoss/metaflow_metadata_service'
     ContainerPort:
@@ -1181,7 +1181,6 @@ Resources:
     Properties:
       Type: MANAGED
       ServiceRole: !GetAtt 'BatchExecutionRole.Arn'
-      ComputeEnvironmentName: !Join [ "-", [ 'batch-compute-v2', !Ref 'AWS::StackName' ] ]
       ComputeResources:
         MaxvCpus: !Ref MaxVCPUBatch
         SecurityGroupIds:
@@ -1206,7 +1205,7 @@ Resources:
     Properties:
       ComputeEnvironmentOrder:
         - Order: 1
-          ComputeEnvironment: !Join [ "-", [ 'batch-compute-env', !Ref 'AWS::StackName' ] ]
+          ComputeEnvironment: !Ref ComputeEnvironment
       State: ENABLED
       Priority: 1
       JobQueueName: !Join [ "-", [ 'job-queue', !Ref 'AWS::StackName' ] ]
