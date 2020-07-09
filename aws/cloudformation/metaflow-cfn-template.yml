@@ -522,7 +522,7 @@ Resources:
         SecretStringTemplate: '{"username": "master"}'
         GenerateStringKey: "password"
         PasswordLength: 16
-        ExcludeCharacters: "\"\\@/'"
+        ExcludeCharacters: '"@/\'
   SecretRDSInstanceAttachment:
     Type: "AWS::SecretsManager::SecretTargetAttachment"
     Properties:
