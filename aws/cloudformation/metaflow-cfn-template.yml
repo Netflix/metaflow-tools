@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Stack for complete deployment of Metaflow
+Description: Stack for complete deployment of Metaflow (v2.0.0)
 
 Parameters:
   SagemakerInstance: 
@@ -29,17 +29,17 @@ Parameters:
   MinVCPUBatch: 
     Type: Number
     Default: 8
-    MinValue: 2
+    MinValue: 0
     MaxValue: 16
-    AllowedValues: [2,4,8,16]
-    Description: 'Maximum VCPUs for Batch Compute Environment [2-16]'
+    AllowedValues: [0,2,4,8,16]
+    Description: 'Maximum VCPUs for Batch Compute Environment [0-16]'
   DesiredVCPUBatch: 
     Type: Number
     Default: 8
-    MinValue: 2
+    MinValue: 0
     MaxValue: 16
-    AllowedValues: [2,4,8,16]
-    Description: 'Desired Starting VCPUs for Batch Compute Environment [2-16]'
+    AllowedValues: [0,2,4,8,16]
+    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16]'
   CustomRole:
     Type: String
     Default: 'false'
@@ -50,13 +50,18 @@ Parameters:
     Default: 'false'
     AllowedValues: ['false', 'true']
     Description: 'Enable basic auth for API Gateway? (requires key export)'
+  EnableSagemaker:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['false', 'true']
+    Description: 'Enable Sagemaker Notebooks'
 
 Mappings:
   ServiceInfo:
     StackName: 
       value: 'metaflow-infrastructure'
     ServiceName:
-      value: 'metadata-service'
+      value: 'metadata-service-v2'
     ImageUrl:
       value: 'netflixoss/metaflow_metadata_service'
     ContainerPort:
@@ -76,6 +81,7 @@ Mappings:
 Conditions:
   EnableAuth: !Equals [ !Ref APIBasicAuth, 'true']
   EnableRole: !Equals [ !Ref CustomRole, 'true']
+  EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -151,6 +157,15 @@ Resources:
       FromPort: 8080
       ToPort: 8080
       CidrIp: !GetAtt 'VPC.CidrBlock'
+  NLBIngressRuleDBMigrate:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+        Description: 'Allow API Calls Internally'
+        GroupId: !Ref FargateSecurityGroup
+        IpProtocol: tcp
+        FromPort: 8082
+        ToPort: 8082
+        CidrIp: !GetAtt 'VPC.CidrBlock'
   FargateInternalRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -176,6 +191,17 @@ Resources:
           Type: 'forward'
       LoadBalancerArn: !Ref 'NLB'
       Port: 80
+      Protocol: TCP
+  NLBListenerDBMigrate:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - NLB
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref 'NLBTargetGroupDBMigrate'
+          Type: 'forward'
+      LoadBalancerArn: !Ref 'NLB'
+      Port: 8082
       Protocol: TCP
   ECSRole:
     Type: AWS::IAM::Role
@@ -263,6 +289,26 @@ Resources:
               Condition:
                 StringNotEquals:
                   s3:authType: REST-HEADER
+  ECSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ECSInstanceRole
+  ECSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - 'ec2.amazonaws.com'
+          Action:
+            - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -292,6 +338,17 @@ Resources:
           Image: !FindInMap ['ServiceInfo', 'ImageUrl', 'value']
           PortMappings:
             - ContainerPort: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
+            - ContainerPort: 8082
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Join ['', ['/ecs/', !Ref 'AWS::StackName', '-', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: 'ecs'
+  MetadataServiceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', ['/ecs/', !Ref 'AWS::StackName', '-', !FindInMap ['ServiceInfo', 'ServiceName', 'value']]]
   ECSFargateService:
     Type: AWS::ECS::Service
     Properties:
@@ -315,6 +372,88 @@ Resources:
         - ContainerName: !FindInMap ['ServiceInfo', 'ServiceName', 'value']
           ContainerPort: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
           TargetGroupArn: !Ref 'NLBTargetGroup'
+        - ContainerName: !FindInMap ['ServiceInfo', 'ServiceName', 'value']
+          ContainerPort: 8082
+          TargetGroupArn: !Ref 'NLBTargetGroupDBMigrate'
+  LambdaECSExecuteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: Cloudwatch
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: CreateLogGroup
+              Effect: Allow
+              Action: logs:CreateLogGroup
+              Resource: !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':*' ] ]
+            - Sid: LogEvents
+              Effect: Allow
+              Action:
+                - logs:PutLogEvents
+                - logs:CreateLogStream
+              Resource: !Join [ "", [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/lambda/', !Ref 'AWS::StackName', '-migrate-db:*'] ]
+        - PolicyName: VPC
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: NetInts
+              Effect: Allow
+              Action:
+                - ec2:CreateNetworkInterface
+                - ec2:DescribeNetworkInterfaces
+                - ec2:DeleteNetworkInterface
+              Resource: '*'
+  ExecuteDBMigration:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.7
+      Role: !GetAtt LambdaECSExecuteRole.Arn
+      Handler: index.handler
+      Environment:
+        Variables:
+          MD_LB_ADDRESS: !Join ['', ['http://', !GetAtt 'NLB.DNSName', ':8082'] ]
+      Code:
+        ZipFile: |
+          import os, json
+          from urllib import request
+          
+          def handler(event, context):
+            response = {}
+            status_endpoint = "{}/db_schema_status".format(os.environ.get('MD_LB_ADDRESS'))
+            upgrade_endpoint = "{}/upgrade".format(os.environ.get('MD_LB_ADDRESS'))
+            
+            with request.urlopen(status_endpoint) as status:
+              response['init-status'] = json.loads(status.read())
+            
+            upgrade_patch = request.Request(upgrade_endpoint, method='PATCH')
+            with request.urlopen(upgrade_patch) as upgrade:
+              response['upgrade-result'] = upgrade.read().decode()
+              
+            with request.urlopen(status_endpoint) as status:
+              response['final-status'] = json.loads(status.read())
+          
+            print(response)
+            return(response)
+      Description: Trigger DB Migration
+      FunctionName: !Join ['-', [!Ref 'AWS::StackName', 'migrate-db'] ]
+      Timeout: 900
+      VpcConfig: 
+        SecurityGroupIds: 
+          - !GetAtt VPC.DefaultSecurityGroup
+        SubnetIds: 
+          - !Ref Subnet1
+          - !Ref Subnet2
   NLBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -324,6 +463,19 @@ Resources:
       HealthyThresholdCount: 2
       TargetType: ip
       Port: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
+      Protocol: TCP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref 'VPC'
+  NLBTargetGroupDBMigrate:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckProtocol: TCP
+      HealthCheckTimeoutSeconds: 10
+      HealthCheckPort: 8080
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Port: 8082
       Protocol: TCP
       UnhealthyThresholdCount: 2
       VpcId: !Ref 'VPC'
@@ -392,6 +544,7 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
   SagemakerSecurityGroup:
+    Condition: 'EnableSagemaker'
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: 'Security Group for Sagemaker'
@@ -402,6 +555,7 @@ Resources:
           FromPort: 8080
           ToPort: 8080
   SageMakerExecutionRole:
+    Condition: 'EnableSagemaker'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -526,8 +680,7 @@ Resources:
             - sts:AssumeRole
       Path: /
       Policies: 
-        - 
-          PolicyName: "Metaflow-Policy"
+        - PolicyName: "Metaflow-Policy"
           PolicyDocument: 
             Version: "2012-10-17"
             Statement: 
@@ -613,7 +766,162 @@ Resources:
               Effect: Allow
               Action: sagemaker:DescribeTrainingJob
               Resource: !Sub arn:aws:sagemaker:${AWS::Region}:${AWS::AccountId}:training-job/*
+        - PolicyName: AllowStepFunctions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: TasksAndExecutionsGlobal
+              Effect: Allow
+              Action:
+                - "states:ListStateMachines"
+              Resource: '*'
+            - Sid: StateMachines
+              Effect: Allow
+              Action:
+                - "states:DescribeStateMachine"
+                - "states:UpdateStateMachine"
+                - "states:StartExecution"
+                - "states:CreateStateMachine"
+                - "states:ListExecutions"
+                - "states:StopExecution"
+              Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
+        - PolicyName: AllowEventBridge
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: RuleMaintenance
+                Effect: Allow
+                Action:
+                  - "events:PutTargets"
+                  - "events:DisableRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*"
+              - Sid: PutRule
+                Effect: Allow
+                Action:
+                  - "events:PutRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/*"
+                Condition:
+                  "Null":
+                    events:source: true
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - events.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AllowStepFunctions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ExecuteStepFunction
+                Effect: Allow
+                Action:
+                  - 'states:StartExecution'
+                Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - states.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: BatchPerms
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: JobsPermissions
+              Effect: Allow
+              Action:
+                - "batch:TerminateJob"
+                - "batch:DescribeJobs"
+                - "batch:DescribeJobDefinitions"
+                - "batch:DescribeJobQueues"
+                - "batch:RegisterJobDefinition"
+              Resource: '*'
+            - Sid: DefinitionsPermissions
+              Effect: Allow
+              Action:
+                - "batch:SubmitJob"
+              Resource:
+                - !Ref "JobQueue"
+                - !Sub arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*:*
+        - PolicyName: CustomS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: BucketAccess
+              Effect: Allow
+              Action: s3:ListBucket
+              Resource: !GetAtt 'MetaflowS3Bucket.Arn'
+            - Sid: ObjectAccess
+              Effect: "Allow"
+              Action: 
+                - "s3:*Object"
+              Resource:
+                - !GetAtt 'MetaflowS3Bucket.Arn'
+                - !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
+        - PolicyName: AllowCloudwatch
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: CloudwatchLogDelivery
+                Effect: Allow
+                Action:
+                  - "logs:CreateLogDelivery"
+                  - "logs:GetLogDelivery"
+                  - "logs:UpdateLogDelivery"
+                  - "logs:DeleteLogDelivery"
+                  - "logs:ListLogDeliveries"
+                  - "logs:PutResourcePolicy"
+                  - "logs:DescribeResourcePolicies"
+                  - "logs:DescribeLogGroups"
+                Resource: '*'
+        - PolicyName: AllowEventBridge
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: RuleMaintenance
+                Effect: Allow
+                Action:
+                  - "events:PutTargets"
+                  - "events:DescribeRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForBatchJobsRule"
+              - Sid: PutRule
+                Effect: Allow
+                Action:
+                  - "events:PutRule"
+                Resource: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForBatchJobsRule"
+                Condition:
+                  StringEquals: 
+                    events:detail-type: "Batch Job State Change"
+        - PolicyName: DynamoDB
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: Items
+              Effect: Allow
+              Action:
+                - "dynamodb:PutItem"
+                - "dynamodb:GetItem"
+                - "dynamodb:UpdateItem"
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StepFunctionsStateDDB}
   BasicNotebookInstanceLifecycleConfig:
+    Condition: 'EnableSagemaker'
     Type: "AWS::SageMaker::NotebookInstanceLifecycleConfig"
     Properties:
       OnCreate:
@@ -638,6 +946,7 @@ Resources:
                 echo "THIS IS A PLACE HOLDER TO EXECUTE - USER LEVEL" >> ~/.customrc
                 EOF
   SageMakerNotebookInstance:
+    Condition: 'EnableSagemaker'
     Type: AWS::SageMaker::NotebookInstance
     Properties:
       NotebookInstanceName: !Join ['', [!Ref 'AWS::StackName', '-NotebookInstance-', '{{resolve:secretsmanager:', !Ref RandomString, ':SecretString:password}}' ]]
@@ -737,6 +1046,17 @@ Resources:
               Condition:
                 StringEquals:
                   iam:PassedToService: sagemaker.amazonaws.com
+        - PolicyName: DynamoDB
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: Items
+              Effect: Allow
+              Action:
+                - "dynamodb:PutItem"
+                - "dynamodb:GetItem"
+                - "dynamodb:UpdateItem"
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StepFunctionsStateDDB}
   BatchExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -861,17 +1181,16 @@ Resources:
     Properties:
       Type: MANAGED
       ServiceRole: !GetAtt 'BatchExecutionRole.Arn'
-      ComputeEnvironmentName: !Join [ "-", [ 'batch-compute-env', !Ref 'AWS::StackName' ] ]
       ComputeResources:
         MaxvCpus: !Ref MaxVCPUBatch
         SecurityGroupIds:
-          - !Ref SagemakerSecurityGroup
+          - !GetAtt VPC.DefaultSecurityGroup
         Type: EC2
         Subnets:
           - !Ref Subnet1
           - !Ref Subnet2
         MinvCpus: !Ref MinVCPUBatch
-        InstanceRole: ecsInstanceRole
+        InstanceRole: !GetAtt 'ECSInstanceProfile.Arn'
         InstanceTypes:
           - c4.large
           - c4.xlarge
@@ -886,7 +1205,7 @@ Resources:
     Properties:
       ComputeEnvironmentOrder:
         - Order: 1
-          ComputeEnvironment: !Join [ "-", [ 'batch-compute-env', !Ref 'AWS::StackName' ] ]
+          ComputeEnvironment: !Ref ComputeEnvironment
       State: ENABLED
       Priority: 1
       JobQueueName: !Join [ "-", [ 'job-queue', !Ref 'AWS::StackName' ] ]
@@ -901,6 +1220,12 @@ Resources:
       ParentId: !GetAtt Api.RootResourceId
       RestApiId: !Ref Api
       PathPart: '{proxy+}'
+  DBApiResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt Api.RootResourceId
+      RestApiId: !Ref Api
+      PathPart: 'db_schema_status'
   VpcLink:
       Type: AWS::ApiGateway::VpcLink
       Properties:
@@ -927,6 +1252,23 @@ Resources:
         IntegrationHttpMethod: ANY
         Type: HTTP_PROXY
         Uri: !Join ['', ['http://', !GetAtt 'NLB.DNSName', '/{proxy}'] ]
+        PassthroughBehavior: WHEN_NO_MATCH
+        IntegrationResponses:
+          - StatusCode: 200
+  DBMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: GET
+      ApiKeyRequired: !If [ EnableAuth, 'true', !Ref "AWS::NoValue" ]
+      ResourceId: !Ref DBApiResource
+      RestApiId: !Ref Api
+      AuthorizationType: NONE
+      Integration:
+        ConnectionType: VPC_LINK
+        ConnectionId: !Ref VpcLink
+        IntegrationHttpMethod: GET
+        Type: HTTP_PROXY
+        Uri: !Join ['', ['http://', !GetAtt 'NLB.DNSName', ':8082/db_schema_status'] ]
         PassthroughBehavior: WHEN_NO_MATCH
         IntegrationResponses:
           - StatusCode: 200
@@ -967,6 +1309,19 @@ Resources:
       KeyId: !Ref ApiKey
       KeyType: API_KEY
       UsagePlanId: !Ref ApiUsagePlan
+  StepFunctionsStateDDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "pathspec"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "pathspec"
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 Outputs:
   MetaflowDataStoreS3Url:
     Description: Amazon S3 URL for Metaflow DataStore [METAFLOW_DATASTORE_SYSROOT_S3]
@@ -995,5 +1350,18 @@ Outputs:
     Description: "IAM Role for Metaflow Stack"
     Value: !GetAtt "MetaflowUserRole.Arn"
   SageMakerNoteBookURL:
+    Condition: 'EnableSagemaker'
     Description: URL for SageMaker Notebook Instance
     Value: !Sub 'https://${SageMakerNotebookInstance.NotebookInstanceName}.notebook.${AWS::Region}.sagemaker.aws/tree'
+  EventBridgeRoleArn:
+    Description: "IAM Role for Event Bridge [METAFLOW_EVENTS_SFN_ACCESS_IAM_ROLE]"
+    Value: !GetAtt "EventBridgeRole.Arn"
+  StepFunctionsRoleArn:
+    Description: "IAM Role for Step Functions [METAFLOW_SFN_IAM_ROLE]"
+    Value: !GetAtt "StepFunctionsRole.Arn"
+  DDBTableName:
+    Description: "DynamoDB Table Name [METAFLOW_SFN_DYNAMO_DB_TABLE]"
+    Value: !Ref StepFunctionsStateDDB
+  MigrationFunctionName:
+    Description: "Name of DB Migration Function"
+    Value: !Ref ExecuteDBMigration
