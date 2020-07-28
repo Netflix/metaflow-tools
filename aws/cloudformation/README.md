@@ -24,8 +24,7 @@ This CloudFormation template deploys all the necessary infrastucture in AWS to s
 
 ### Prerequisites
 
-1. Thanks to some community love, the following account-specific role is no longer required.  The only prereq (as listed below) is account permissions to deploy all resources in this template. ~~An ECS Instance Role for AWS Batch.  AWS Batch leverages ECS container instances and their respective ECS agents to query various AWS API's.  This template doesn't deploy a role for those instances, as it's a one-time creation that many users will already have, and CloudFormation deployment will fail if the resource already exists.  Instructions for checking for and creating the role can be found [here](https://docs.aws.amazon.com/batch/latest/userguide/instance_IAM_role.html).  Please note that the role **MUST** be named "ecsInstanceRole" and have only the "AmazonEC2ContainerServiceforEC2Role" managed policy attached.~~
-2. Adequate permissions to deploy all CloudFormation resources within an AWS account.
+1. Adequate permissions to deploy all CloudFormation resources within an AWS account.
 
 ### How To Deploy from the AWS Console
 
