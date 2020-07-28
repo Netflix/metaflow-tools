@@ -8,9 +8,13 @@ This CloudFormation template deploys all the necessary infrastucture in AWS to s
 
 - **AWS Batch Compute Environment** - In order to extend Metaflow's compute capabilities to the cloud, AWS Batch provides a simple API that runs container-based jobs to completion on AWS Elastic Container Service.
 
+- **AWS Step Functions and Event Bridge IAM Resources** - While Step Functions state machines aren't explicitly created by this template, Metaflow's 2.0+ releases include functionality to allow a 1:1 Flow <--> State Machine relationship.  In order to facilitate this, there are some IAM roles and policies specific to allowing Metaflow to deploy and trigger Step Functions State Machines.
+
+- **Amazon DynamoDB Table** - Metaflow leverages DynamoDB to store information related to branching paths in flows executed by AWS Step Functions.  This template deploys the appropriate table and overlays necessary permissions for AWS Batch and AWS Step Functions to communicate with it.
+
 - **Amazon Sagemaker Notebook Instance** - Metaflow's API allows for easy access to flow results and information which can be cleanly displayed in a Jupyter notebook.  Amazon Sagemaker Notebook instances provide a fully managed notebook environment with dedicated and customizable compute resources.
 
-- **Metadata Service on AWS Fargate and Amazon Relational Database Service** - To facilitate persistent programmatic access to flow information, Metaflow provides a Metadata service that can be run on cloud resources and enable remote accessibility.  This CloudFormation template leverages AWS Fargate and Amazon Relational Database Service to deploy the Metadata Service Automatically.
+- **Metadata and Database Services on AWS Fargate and Amazon Relational Database Service** - To facilitate persistent programmatic access to flow information, Metaflow provides a Metadata service that can be run on cloud resources and enable remote accessibility.  This CloudFormation template leverages AWS Fargate and Amazon Relational Database Service to deploy the Metadata Service Automatically.
 
 - **Amazon API Gateway** - To provide secure, encrypted access to a user's Metadata Service, this CloudFormation template uses Amazon API Gateway as a TLS termination point and an optional point of basic API authentication via key.
 
@@ -20,7 +24,7 @@ This CloudFormation template deploys all the necessary infrastucture in AWS to s
 
 ### Prerequisites
 
-1. An ECS Instance Role for AWS Batch.  AWS Batch leverages ECS container instances and their respective ECS agents to query various AWS API's.  This template doesn't deploy a role for those instances, as it's a one-time creation that many users will already have, and CloudFormation deployment will fail if the resource already exists.  Instructions for checking for and creating the role can be found [here](https://docs.aws.amazon.com/batch/latest/userguide/instance_IAM_role.html).  Please note that the role **MUST** be named "ecsInstanceRole" and have only the "AmazonEC2ContainerServiceforEC2Role" managed policy attached.
+1. Thanks to some community love, the following account-specific role is no longer required.  The only prereq (as listed below) is account permissions to deploy all resources in this template. ~~An ECS Instance Role for AWS Batch.  AWS Batch leverages ECS container instances and their respective ECS agents to query various AWS API's.  This template doesn't deploy a role for those instances, as it's a one-time creation that many users will already have, and CloudFormation deployment will fail if the resource already exists.  Instructions for checking for and creating the role can be found [here](https://docs.aws.amazon.com/batch/latest/userguide/instance_IAM_role.html).  Please note that the role **MUST** be named "ecsInstanceRole" and have only the "AmazonEC2ContainerServiceforEC2Role" managed policy attached.~~
 2. Adequate permissions to deploy all CloudFormation resources within an AWS account.
 
 ### How To Deploy from the AWS Console
