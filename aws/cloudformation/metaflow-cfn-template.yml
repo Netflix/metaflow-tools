@@ -40,6 +40,10 @@ Parameters:
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
     Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16]'
+  ComputeEnvInstanceTypes: 
+    Type: CommaDelimitedList
+    Default: "c4.large,c4.xlarge,c4.2xlarge,c4.4xlarge,c4.8xlarge"
+    Description: "The instance types for the compute environment as a comma-separated list"
   CustomRole:
     Type: String
     Default: 'false'
@@ -1191,12 +1195,7 @@ Resources:
           - !Ref Subnet2
         MinvCpus: !Ref MinVCPUBatch
         InstanceRole: !GetAtt 'ECSInstanceProfile.Arn'
-        InstanceTypes:
-          - c4.large
-          - c4.xlarge
-          - c4.2xlarge
-          - c4.4xlarge
-          - c4.8xlarge
+        InstanceTypes: !Ref ComputeEnvInstanceTypes
         DesiredvCpus: !Ref DesiredVCPUBatch
       State: ENABLED
   JobQueue:
