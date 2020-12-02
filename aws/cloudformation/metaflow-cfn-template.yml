@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Stack for complete deployment of Metaflow (v2.2.5)
+Description: Stack for complete deployment of Metaflow (last-updated-date 12/02/2020)
 
 Parameters:
   SagemakerInstance: 
@@ -63,7 +63,7 @@ Parameters:
     Type: String
     Default: 'aws'
     AllowedValues: ['aws', 'aws-us-gov']
-    Description: 'IAM Partition (DO NOT CHANGE THIS UNLESS YOU HAVE A VERY SPECIFIC REASON)'
+    Description: 'IAM Partition (Select aws-us-gov for AWS GovCloud, otherwise leave as is)'
 
 Mappings:
   ServiceInfo:
