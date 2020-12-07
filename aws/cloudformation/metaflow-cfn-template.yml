@@ -64,6 +64,11 @@ Parameters:
     Default: 'aws'
     AllowedValues: ['aws', 'aws-us-gov']
     Description: 'IAM Partition (Select aws-us-gov for AWS GovCloud, otherwise leave as is)'
+  EnableUI:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: 'Enable Metaflow UI'
 
 Mappings:
   ServiceInfo:
@@ -92,6 +97,7 @@ Conditions:
   EnableRole: !Equals [ !Ref CustomRole, 'true']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
+  EnableUI: !Equals [ !Ref EnableUI, 'true']
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -1330,6 +1336,38 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
+
+# Metaflow UI Nested stack
+
+  MetaflowUI:
+    Condition: 'EnableUI'
+    DependsOn:
+      - VPC
+      - Subnet1
+      - Subnet2
+      - FargateSecurityGroup
+      - ECSCluster
+      - ECSTaskExecutionRole
+      - MetadataSvcECSTaskRole
+      - RDSMasterInstance
+      - MyRDSSecret
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ui/metaflow-ui-cfn-template.yml
+      Parameters:
+        VPCId: !Ref VPC
+        VPCCidrBlock: !GetAtt 'VPC.CidrBlock'
+        SubnetIds: !Join [',', [ !Ref Subnet1, !Ref Subnet2 ]]
+        SecurityGroup: !Ref FargateSecurityGroup
+        ECSClusterId: !Ref ECSCluster
+        ECSTaskExecutionRoleId: !Ref ECSTaskExecutionRole
+        MetadataSvcECSTaskRoleArn: !GetAtt 'MetadataSvcECSTaskRole.Arn'
+        DatabaseHost: !GetAtt 'RDSMasterInstance.Endpoint.Address'
+        DatabasePort: "5432"
+        DatabaseUser: "master"
+        DatabasePassword: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSSecret, ':SecretString:password}}' ]]
+        DatabaseName: "metaflow"
+
 Outputs:
   MetaflowDataStoreS3Url:
     Description: Amazon S3 URL for Metaflow DataStore [METAFLOW_DATASTORE_SYSROOT_S3]
