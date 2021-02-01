@@ -2,30 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Stack for complete deployment of Metaflow (last-updated-date 12/02/2020)
 
 Parameters:
-  ExistingVpcId:
-    Type: String
-    Default: 'NONE'
-    Description: "Insert ID of an existing VPC if you don't want to crate a new VPC (note that you also need to populate ExistingVpcCidrBlock, ExistingVpcSecurityGroupId, ExistingPublicSubnet1Id, ExistingPublicSubnet2Id and ExistingPrivateSubnets)"
-  ExistingVpcCidrBlock:
-    Type: String
-    Default: 'NONE'
-    Description: 'CIDR block of the existing VPC, populate this only if you also populated ExistingVpcId'
-  ExistingVpcSecurityGroupId:
-    Type: String
-    Default: 'NONE'
-    Description: 'ID of an existing security group, populate this only if you also populated ExistingVpcId'
-  ExistingPublicSubnet1Id:
-    Type: String
-    Default: 'NONE'
-    Description: 'ID of the 1st existing public subnet, populate this only if you also populated ExistingVpcId'
-  ExistingPublicSubnet2Id:
-    Type: String
-    Default: 'NONE'
-    Description: 'ID of the 2nd existing public subnet, populate this only if you also populated ExistingVpcId'
-  ExistingPrivateSubnets:
-    Type: CommaDelimitedList
-    Default: 'NONE'
-    Description: 'Comma-separated list of IDs of existing private subnets, populate this only if you also populated ExistingVpcId'
   SagemakerInstance: 
     Type: String
     Default: ml.t2.xlarge
@@ -88,6 +64,30 @@ Parameters:
     Default: 'aws'
     AllowedValues: ['aws', 'aws-us-gov']
     Description: 'IAM Partition (Select aws-us-gov for AWS GovCloud, otherwise leave as is)'
+  ExistingVpcId:
+    Type: String
+    Default: ''
+    Description: "Optional: insert ID of an existing VPC if you don't want to crate a new VPC (note that you also need to populate ExistingVpcCidrBlock, ExistingVpcSecurityGroupId, ExistingPublicSubnet1Id, ExistingPublicSubnet2Id and ExistingPrivateSubnets)"
+  ExistingVpcCidrBlock:
+    Type: String
+    Default: ''
+    Description: 'Optional: CIDR block of the existing VPC, populate this only if you also populated ExistingVpcId'
+  ExistingVpcSecurityGroupId:
+    Type: String
+    Default: ''
+    Description: 'Optional: ID of an existing security group, populate this only if you also populated ExistingVpcId'
+  ExistingPublicSubnet1Id:
+    Type: String
+    Default: ''
+    Description: 'Optional: ID of the 1st existing public subnet, populate this only if you also populated ExistingVpcId'
+  ExistingPublicSubnet2Id:
+    Type: String
+    Default: ''
+    Description: 'Optional: ID of the 2nd existing public subnet, populate this only if you also populated ExistingVpcId'
+  ExistingPrivateSubnets:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: 'Optional: comma-separated list of IDs of existing private subnets, populate this only if you also populated ExistingVpcId'
 
 Mappings:
   ServiceInfo:
@@ -113,12 +113,12 @@ Mappings:
       value: ""
 Conditions:
   CreateOwnVpc: !Or
-    - !Equals [ !Ref ExistingVpcId, 'NONE' ]
-    - !Equals [ !Ref ExistingVpcCidrBlock, 'NONE' ]
-    - !Equals [ !Ref ExistingVpcSecurityGroupId, 'NONE' ]
-    - !Equals [ !Ref ExistingPublicSubnet1Id, 'NONE' ]
-    - !Equals [ !Ref ExistingPublicSubnet2Id, 'NONE' ]
-    - !Equals [ !Join ["", !Ref ExistingPrivateSubnets], 'NONE' ]
+    - !Equals [ !Ref ExistingVpcId, '' ]
+    - !Equals [ !Ref ExistingVpcCidrBlock, '' ]
+    - !Equals [ !Ref ExistingVpcSecurityGroupId, '' ]
+    - !Equals [ !Ref ExistingPublicSubnet1Id, '' ]
+    - !Equals [ !Ref ExistingPublicSubnet2Id, '' ]
+    - !Equals [ !Join ['', !Ref ExistingPrivateSubnets], '' ]
   EnableAuth: !Equals [ !Ref APIBasicAuth, 'true']
   EnableRole: !Equals [ !Ref CustomRole, 'true']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
