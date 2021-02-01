@@ -5,27 +5,27 @@ Parameters:
   ExistingVpcId:
     Type: String
     Default: 'NONE'
-    Description: "Insert ID of an existing VPC if you don't want to crate a new VPC"
+    Description: "Insert ID of an existing VPC if you don't want to crate a new VPC (note that you also need to populate ExistingVpcCidrBlock, ExistingVpcSecurityGroupId, ExistingPublicSubnet1Id, ExistingPublicSubnet2Id and ExistingPrivateSubnets)"
   ExistingVpcCidrBlock:
     Type: String
     Default: 'NONE'
-    Description: 'Populate this only if you also populated ExistingVpcId'
+    Description: 'CIDR block of the existing VPC, populate this only if you also populated ExistingVpcId'
   ExistingVpcSecurityGroupId:
     Type: String
     Default: 'NONE'
-    Description: 'Populate this only if you also populated ExistingVpcId'
+    Description: 'ID of an existing security group, populate this only if you also populated ExistingVpcId'
   ExistingPublicSubnet1Id:
     Type: String
     Default: 'NONE'
-    Description: 'Populate this only if you also populated ExistingVpcId'
+    Description: 'ID of the 1st existing public subnet, populate this only if you also populated ExistingVpcId'
   ExistingPublicSubnet2Id:
     Type: String
     Default: 'NONE'
-    Description: 'Populate this only if you also populated ExistingVpcId'
+    Description: 'ID of the 2nd existing public subnet, populate this only if you also populated ExistingVpcId'
   ExistingPrivateSubnets:
     Type: CommaDelimitedList
     Default: 'NONE'
-    Description: 'Populate this only if you also populated ExistingVpcId'
+    Description: 'Comma-separated list of IDs of existing private subnets, populate this only if you also populated ExistingVpcId'
   SagemakerInstance: 
     Type: String
     Default: ml.t2.xlarge
