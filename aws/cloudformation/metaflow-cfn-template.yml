@@ -2,6 +2,30 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Stack for complete deployment of Metaflow (last-updated-date 12/02/2020)
 
 Parameters:
+  ExistingVpcId:
+    Type: String
+    Default: 'NONE'
+    Description: "Insert ID of an existing VPC if you don't want to crate a new VPC"
+  ExistingVpcCidrBlock:
+    Type: String
+    Default: 'NONE'
+    Description: 'Populate this only if you also populated ExistingVpcId'
+  ExistingVpcSecurityGroupId:
+    Type: String
+    Default: 'NONE'
+    Description: 'Populate this only if you also populated ExistingVpcId'
+  ExistingPublicSubnet1Id:
+    Type: String
+    Default: 'NONE'
+    Description: 'Populate this only if you also populated ExistingVpcId'
+  ExistingPublicSubnet2Id:
+    Type: String
+    Default: 'NONE'
+    Description: 'Populate this only if you also populated ExistingVpcId'
+  ExistingPrivateSubnets:
+    Type: CommaDelimitedList
+    Default: 'NONE'
+    Description: 'Populate this only if you also populated ExistingVpcId'
   SagemakerInstance: 
     Type: String
     Default: ml.t2.xlarge
@@ -88,18 +112,27 @@ Mappings:
     Role:
       value: ""
 Conditions:
+  CreateOwnVpc: !Or
+    - !Equals [ !Ref ExistingVpcId, 'NONE' ]
+    - !Equals [ !Ref ExistingVpcCidrBlock, 'NONE' ]
+    - !Equals [ !Ref ExistingVpcSecurityGroupId, 'NONE' ]
+    - !Equals [ !Ref ExistingPublicSubnet1Id, 'NONE' ]
+    - !Equals [ !Ref ExistingPublicSubnet2Id, 'NONE' ]
+    - !Equals [ !Join ["", !Ref ExistingPrivateSubnets], 'NONE' ]
   EnableAuth: !Equals [ !Ref APIBasicAuth, 'true']
   EnableRole: !Equals [ !Ref CustomRole, 'true']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
 Resources:
   VPC:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::VPC
     Properties:
       EnableDnsSupport: true
       EnableDnsHostnames: true
       CidrBlock: !Ref VPCCidr
   Subnet1:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
@@ -110,6 +143,7 @@ Resources:
       CidrBlock: !Ref Subnet1Cidr
       MapPublicIpOnLaunch: true
   Subnet2:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
@@ -120,17 +154,21 @@ Resources:
       CidrBlock: !Ref Subnet2Cidr
       MapPublicIpOnLaunch: true
   InternetGateway:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::InternetGateway
   GatewayAttachement:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref 'VPC'
       InternetGatewayId: !Ref 'InternetGateway'
   PublicRouteTable:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref 'VPC'
   DefaultGateway:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::Route
     DependsOn: GatewayAttachement
     Properties:
@@ -138,11 +176,13 @@ Resources:
       DestinationCidrBlock: '0.0.0.0/0'
       GatewayId: !Ref 'InternetGateway'
   Subnet1RTA:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref Subnet1
       RouteTableId: !Ref PublicRouteTable
   Subnet2RTA:
+    Condition: CreateOwnVpc
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref Subnet2
@@ -157,7 +197,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group for Fargate
-      VpcId: !Ref 'VPC'
+      VpcId: !If [ CreateOwnVpc, !Ref 'VPC', !Ref ExistingVpcId ]
   NLBIngressRule:
    Type: 'AWS::EC2::SecurityGroupIngress'
    Properties:
@@ -166,7 +206,7 @@ Resources:
       IpProtocol: tcp
       FromPort: 8080
       ToPort: 8080
-      CidrIp: !GetAtt 'VPC.CidrBlock'
+      CidrIp: !If [ CreateOwnVpc, !GetAtt 'VPC.CidrBlock', !Ref ExistingVpcCidrBlock ]
   NLBIngressRuleDBMigrate:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -175,7 +215,7 @@ Resources:
         IpProtocol: tcp
         FromPort: 8082
         ToPort: 8082
-        CidrIp: !GetAtt 'VPC.CidrBlock'
+        CidrIp: !If [ CreateOwnVpc, !GetAtt 'VPC.CidrBlock', !Ref ExistingVpcCidrBlock ]
   FargateInternalRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -189,8 +229,8 @@ Resources:
       Scheme: internal
       Type: network
       Subnets:
-        - !Ref Subnet1
-        - !Ref Subnet2
+        - !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
+        - !If [ CreateOwnVpc, !Ref Subnet2, !Ref ExistingPublicSubnet2Id ]
   NLBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
@@ -374,9 +414,10 @@ Resources:
           AssignPublicIp: ENABLED
           SecurityGroups:
             - !Ref 'FargateSecurityGroup'
-          Subnets:
-            - !Ref 'Subnet1'
-            - !Ref 'Subnet2'
+          Subnets: !If
+            - CreateOwnVpc
+            - [ !Ref Subnet1, !Ref Subnet2 ]
+            - [ !Ref ExistingPublicSubnet1Id, !Ref ExistingPublicSubnet2Id ]
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
         - ContainerName: !FindInMap ['ServiceInfo', 'ServiceName', 'value']
@@ -460,10 +501,10 @@ Resources:
       Timeout: 900
       VpcConfig: 
         SecurityGroupIds: 
-          - !GetAtt VPC.DefaultSecurityGroup
+          - !If [ CreateOwnVpc, !GetAtt VPC.DefaultSecurityGroup, !Ref ExistingVpcSecurityGroupId ]
         SubnetIds: 
-          - !Ref Subnet1
-          - !Ref Subnet2
+          - !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
+          - !If [ CreateOwnVpc, !Ref Subnet2, !Ref ExistingPublicSubnet2Id ]
   NLBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -475,7 +516,7 @@ Resources:
       Port: !FindInMap ['ServiceInfo', 'ContainerPort', 'value']
       Protocol: TCP
       UnhealthyThresholdCount: 2
-      VpcId: !Ref 'VPC'
+      VpcId: !If [ CreateOwnVpc, !Ref 'VPC', !Ref ExistingVpcId ]
   NLBTargetGroupDBMigrate:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -488,19 +529,19 @@ Resources:
       Port: 8082
       Protocol: TCP
       UnhealthyThresholdCount: 2
-      VpcId: !Ref 'VPC'
+      VpcId: !If [ CreateOwnVpc, !Ref 'VPC', !Ref ExistingVpcId ]
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: DBSubnetGroup for RDS instances
       SubnetIds:
-        - Ref: Subnet1
-        - Ref: Subnet2
+        - !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
+        - !If [ CreateOwnVpc, !Ref Subnet2, !Ref ExistingPublicSubnet2Id ]
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group for RDS
-      VpcId: !Ref 'VPC'
+      VpcId: !If [ CreateOwnVpc, !Ref 'VPC', !Ref ExistingVpcId ]
   PostgresIngressRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -558,7 +599,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: 'Security Group for Sagemaker'
-      VpcId: !Ref VPC
+      VpcId: !If [ CreateOwnVpc, !Ref 'VPC', !Ref ExistingVpcId ]
       SecurityGroupIngress:
         - CidrIp: "0.0.0.0/0"
           IpProtocol: "TCP"
@@ -963,7 +1004,7 @@ Resources:
       InstanceType: !Ref SagemakerInstance
       RoleArn: !GetAtt 'SageMakerExecutionRole.Arn'
       LifecycleConfigName: !GetAtt 'BasicNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleConfigName'
-      SubnetId: !Ref Subnet1
+      SubnetId: !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
       SecurityGroupIds: 
         - !Ref 'SagemakerSecurityGroup'
   RandomString:
@@ -1194,11 +1235,12 @@ Resources:
       ComputeResources:
         MaxvCpus: !Ref MaxVCPUBatch
         SecurityGroupIds:
-          - !GetAtt VPC.DefaultSecurityGroup
+          - !If [ CreateOwnVpc, !GetAtt VPC.DefaultSecurityGroup, !Ref ExistingVpcSecurityGroupId ]
         Type: EC2
-        Subnets:
-          - !Ref Subnet1
-          - !Ref Subnet2
+        Subnets: !If
+          - CreateOwnVpc
+          - [ !Ref Subnet1, !Ref Subnet2 ]
+          - !Ref ExistingPrivateSubnets
         MinvCpus: !Ref MinVCPUBatch
         InstanceRole: !GetAtt 'ECSInstanceProfile.Arn'
         InstanceTypes: !Ref ComputeEnvInstanceTypes
