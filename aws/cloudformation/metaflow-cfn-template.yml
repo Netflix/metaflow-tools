@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Stack for complete deployment of Metaflow (last-updated-date 12/02/2020)
+Description: Stack for complete deployment of Metaflow (last-updated-date 02/09/2021)
 
 Parameters:
   SagemakerInstance: 
