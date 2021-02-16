@@ -746,6 +746,7 @@ Resources:
                 - "batch:DescribeJobDefinitions"
                 - "batch:DescribeJobQueues"
                 - "batch:RegisterJobDefinition"
+                - "batch:DescribeComputeEnvironments"
               Resource: '*'
             - Sid: DefinitionsPermissions
               Effect: Allow
