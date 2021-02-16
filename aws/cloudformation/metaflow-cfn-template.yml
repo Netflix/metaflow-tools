@@ -32,14 +32,14 @@ Parameters:
     MinValue: 0
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
-    Description: 'Minimum VCPUs for Batch Compute Environment [0-16]'
+    Description: 'Minimum VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)'
   DesiredVCPUBatch: 
     Type: Number
     Default: 8
     MinValue: 0
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
-    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16]'
+    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)'
   ComputeEnvInstanceTypes: 
     Type: CommaDelimitedList
     Default: "c4.large,c4.xlarge,c4.2xlarge,c4.4xlarge,c4.8xlarge"
@@ -95,7 +95,7 @@ Mappings:
 Conditions:
   EnableAuth: !Equals [ !Ref APIBasicAuth, 'true']
   EnableRole: !Equals [ !Ref CustomRole, 'true']
-  BatchFargate: !Equals [ !Ref BatchType, 'fargate']
+  EnableFargateOnBatch: !Equals [ !Ref BatchType, 'fargate']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
 Resources:
@@ -1211,14 +1211,14 @@ Resources:
         MaxvCpus: !Ref MaxVCPUBatch
         SecurityGroupIds:
           - !GetAtt VPC.DefaultSecurityGroup
-        Type: !If [BatchFargate, 'FARGATE', 'EC2']
+        Type: !If [EnableFargateOnBatch, 'FARGATE', 'EC2']
         Subnets:
           - !Ref Subnet1
           - !Ref Subnet2
-        MinvCpus: !If [BatchFargate, !Ref AWS::NoValue, !Ref MinVCPUBatch]
-        InstanceRole: !If [BatchFargate, !Ref AWS::NoValue, !GetAtt 'ECSInstanceProfile.Arn']
-        InstanceTypes: !If [BatchFargate, !Ref AWS::NoValue, !Ref ComputeEnvInstanceTypes]
-        DesiredvCpus: !If [BatchFargate, !Ref AWS::NoValue, !Ref DesiredVCPUBatch]
+        MinvCpus: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !Ref MinVCPUBatch]
+        InstanceRole: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !GetAtt 'ECSInstanceProfile.Arn']
+        InstanceTypes: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !Ref ComputeEnvInstanceTypes]
+        DesiredvCpus: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !Ref DesiredVCPUBatch]
       State: ENABLED
   JobQueue:
     DependsOn: ComputeEnvironment
