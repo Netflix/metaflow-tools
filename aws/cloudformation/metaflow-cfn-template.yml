@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Stack for complete deployment of Metaflow (last-updated-date 12/02/2020)
+Description: Stack for complete deployment of Metaflow (last-updated-date 02/09/2021)
 
 Parameters:
   SagemakerInstance: 
@@ -32,14 +32,14 @@ Parameters:
     MinValue: 0
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
-    Description: 'Minimum VCPUs for Batch Compute Environment [0-16]'
+    Description: 'Minimum VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)'
   DesiredVCPUBatch: 
     Type: Number
     Default: 8
     MinValue: 0
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
-    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16]'
+    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)'
   ComputeEnvInstanceTypes: 
     Type: CommaDelimitedList
     Default: "c4.large,c4.xlarge,c4.2xlarge,c4.4xlarge,c4.8xlarge"
@@ -59,6 +59,11 @@ Parameters:
     Default: 'true'
     AllowedValues: ['false', 'true']
     Description: 'Enable Sagemaker Notebooks'
+  BatchType:
+    Type: String
+    Default: 'ec2'
+    AllowedValues: ['ec2', 'fargate']
+    Description: 'AWS Batch Compute Type'
   IAMPartition:
     Type: String
     Default: 'aws'
@@ -90,6 +95,7 @@ Mappings:
 Conditions:
   EnableAuth: !Equals [ !Ref APIBasicAuth, 'true']
   EnableRole: !Equals [ !Ref CustomRole, 'true']
+  EnableFargateOnBatch: !Equals [ !Ref BatchType, 'fargate']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
 Resources:
@@ -740,6 +746,7 @@ Resources:
                 - "batch:DescribeJobDefinitions"
                 - "batch:DescribeJobQueues"
                 - "batch:RegisterJobDefinition"
+                - "batch:DescribeComputeEnvironments"
               Resource: '*'
             - Sid: DefinitionsPermissions
               Effect: Allow
@@ -1067,6 +1074,16 @@ Resources:
                 - "dynamodb:GetItem"
                 - "dynamodb:UpdateItem"
               Resource: !Sub arn:${IAMPartition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StepFunctionsStateDDB}
+        - PolicyName: Cloudwatch
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: AllowPutLogs
+              Effect: Allow
+              Action:
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource: '*'
   BatchExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1195,14 +1212,14 @@ Resources:
         MaxvCpus: !Ref MaxVCPUBatch
         SecurityGroupIds:
           - !GetAtt VPC.DefaultSecurityGroup
-        Type: EC2
+        Type: !If [EnableFargateOnBatch, 'FARGATE', 'EC2']
         Subnets:
           - !Ref Subnet1
           - !Ref Subnet2
-        MinvCpus: !Ref MinVCPUBatch
-        InstanceRole: !GetAtt 'ECSInstanceProfile.Arn'
-        InstanceTypes: !Ref ComputeEnvInstanceTypes
-        DesiredvCpus: !Ref DesiredVCPUBatch
+        MinvCpus: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !Ref MinVCPUBatch]
+        InstanceRole: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !GetAtt 'ECSInstanceProfile.Arn']
+        InstanceTypes: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !Ref ComputeEnvInstanceTypes]
+        DesiredvCpus: !If [EnableFargateOnBatch, !Ref AWS::NoValue, !Ref DesiredVCPUBatch]
       State: ENABLED
   JobQueue:
     DependsOn: ComputeEnvironment
