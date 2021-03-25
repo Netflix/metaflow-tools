@@ -1,9 +1,5 @@
 ## Pre-requisites
 
-### Docker
-
-[Download](https://www.docker.com/products/docker-desktop) and install Docker.
-
 ### Terraform
 
 [Download](https://www.terraform.io/downloads.html) and install terraform 0.14.x.
