@@ -8,7 +8,8 @@
 
 AWS should be [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) with a profile. The `AWS_PROFILE` environment should be set to the profile that has been configured.
 
-The (awscli)[https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html] can be used as follows to confirm that it has been configured properly by running:
+The [awscli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) can be used as follows to 
+confirm that it has been configured properly by running:
 
 ```
 aws sts get-caller-identity
@@ -36,14 +37,15 @@ terraform apply --var-file prod.tfvars
 
 ### Metaflow stack
 
-The metaflow sub-project provisions the metadata api, step functions, and an AWS Batch queue. For more details see the [README](aws/terraform/metaflow/README.md)
+The metaflow sub-project provisions the metadata API, step functions, and an AWS Batch queue. For more details see the 
+[README](aws/terraform/metaflow/README.md)
 
 Copy `example.tfvars` to `prod.tfvars` (or whatever environment name you prefer) and update that `env` name and the `region` as needed.
 
 Additionally:
 * There are variables which govern the three compute environments associated with the AWS Batch queue that can be adjusted based on needs. 
 * The `enable_step_functions` flag can be set to false to not provision the step functions infrastructure. 
-* The `access_list_cidr_blocks` should be set to the network cidr blocks that will be accessing the metadata api.
+* The `access_list_cidr_blocks` should be set to the network cidr blocks that will be accessing the metadata API.
 
 Initialize the terraform:
 
@@ -90,7 +92,7 @@ docker push <ecr-repository-name>
 
 ### Sagemaker Notebook stack
 
-The sagemaker-notebook subproject provisions an optional Jupyter notebook with access to the Metaflow api.
+The sagemaker-notebook subproject provisions an optional Jupyter notebook with access to the Metaflow API.
 
 Copy `example.tfvars` to `prod.tfvars` (or whatever environment name you prefer) and update that `env` name and the `region` as needed.
 

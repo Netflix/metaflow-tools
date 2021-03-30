@@ -26,4 +26,4 @@ Secrets Manager Secret for storing secrets used in flows.
 ### VPC
 
 Virtual Private Cloud with two private subnets in different availability zones and a public subnet. Also includes an 
-Elastic IP address for VPC egress (`elastic_ip_allocation_id`) to allow external services to whitelist access by ip.
+Elastic IP address for VPC egress (`elastic_ip_allocation_id`) to allow external services to whitelist access by IP.

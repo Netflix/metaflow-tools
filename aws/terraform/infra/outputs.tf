@@ -20,7 +20,7 @@ output "vpc_cidr_block" {
 
 output "metaflow_policy_arn" {
   value       = aws_iam_policy.metaflow.arn
-  description = "The ARN of the policy that allows to metaflow s3 buckets, kms keys, and secrets"
+  description = "The ARN of the policy that allows to Metaflow S3 buckets, KMS keys, and secrets"
 }
 
 output "elastic_ip_allocation_id" {

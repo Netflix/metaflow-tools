@@ -1,4 +1,5 @@
 variable "app" {
+  type        = string
   default     = "metaflow-infra"
   description = "Name of the application"
 }
