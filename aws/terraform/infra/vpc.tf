@@ -27,13 +27,20 @@ resource "aws_internet_gateway" "this" {
 }
 
 /*
+ Grants us ability to yield different availability zones for a region
+*/
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+/*
  Create a public Subnet that the two follow private Subnets can use for internet egress connections.
  Contains our NAT Gateway.
 */
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.this.id
   cidr_block              = "10.0.32.0/20"
-  availability_zone       = "${var.aws_region}a"
+  availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
 
   tags = merge(
@@ -69,7 +76,7 @@ resource "aws_nat_gateway" "metaflow_nat_gateway" {
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = "10.0.0.0/20"
-  availability_zone = "${var.aws_region}b"
+  availability_zone = data.aws_availability_zones.available.names[0]
 
   tags = merge(
     module.common_vars.tags,
@@ -83,7 +90,7 @@ resource "aws_subnet" "private_1" {
 resource "aws_subnet" "private_2" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = "10.0.16.0/20"
-  availability_zone = "${var.aws_region}a"
+  availability_zone = data.aws_availability_zones.available.names[1]
 
   tags = merge(
     module.common_vars.tags,
