@@ -15,6 +15,11 @@ variable "aws_region" {
   description = "AWS region we will deploy to."
 }
 
+variable "base_s3_data_sets_bucket_name" {
+  type        = string
+  description = "Base name of S3 bucket to create to store external datasets/artifacts."
+}
+
 variable "vpc_flow_log_s3_destination" {
   type        = string
   description = "The ARN of the S3 bucket to receive VPC flow logs."
