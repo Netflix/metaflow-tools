@@ -41,7 +41,7 @@ The metaflow sub-project provisions the metadata API, step functions, and an AWS
 [README](aws/terraform/metaflow/README.md)
 
 Copy `example.tfvars` to `prod.tfvars` (or whatever environment name you prefer) and update that `env` name and the `region` as needed.
-
+Metadata API authentication: the endpoint is exposed to the public internet via API Gateway, but only accessible to the IPs that match `access_list_cidr_blocks` (default is none).
 Additionally:
 * There are variables which govern the three compute environments associated with the AWS Batch queue that can be adjusted based on needs. 
 * The `enable_step_functions` flag can be set to false to not provision the step functions infrastructure. 
@@ -110,4 +110,3 @@ terraform apply --var-file prod.tfvars
 ```
 
 The Sagemaker notebook url is output as `SAGEMAKER_NOTEBOOK_URL`. Open it to access the notebook.
-
