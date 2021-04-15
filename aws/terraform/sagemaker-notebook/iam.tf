@@ -113,7 +113,7 @@ data aws_iam_policy_document "custom_s3_list_access" {
     ]
 
     resources = [
-      data.terraform_remote_state.metaflow.outputs.sagemaker_s3_bucket_arn
+      data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_arn
     ]
   }
 }
@@ -131,7 +131,7 @@ data "aws_iam_policy_document" "custom_s3_access" {
     ]
 
     resources = [
-      "${data.terraform_remote_state.metaflow.outputs.sagemaker_s3_bucket_arn}/*"
+      "${data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_arn}/*"
     ]
   }
 }
@@ -204,12 +204,12 @@ resource "aws_iam_role_policy" "grant_deny_presigned" {
 
 resource "aws_iam_role_policy_attachment" "grant_access_metaflow_s3_bucket" {
   role       = aws_iam_role.sagemaker_execution_role.name
-  policy_arn = data.terraform_remote_state.metaflow.outputs.sagemaker_s3_bucket_policy
+  policy_arn = data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_policy
 }
 
 resource "aws_iam_role_policy_attachment" "grant_access_metaflow_s3_bucket_kms_key" {
   role       = aws_iam_role.sagemaker_execution_role.name
-  policy_arn = data.terraform_remote_state.metaflow.outputs.sagemaker_s3_bucket_kms_key_policy
+  policy_arn = data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_kms_key_policy
 }
 
 resource "aws_iam_role_policy_attachment" "grant_access_metaflow_policy" {

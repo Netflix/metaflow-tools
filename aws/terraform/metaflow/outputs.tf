@@ -67,27 +67,27 @@ output "metaflow_profile_json" {
 
 # output for sagemaker notebook project
 
-output "sagemaker_s3_bucket_name" {
+output "metaflow_s3_bucket_name" {
   value       = module.metaflow-datastore.s3_bucket_name
   description = "The name of the bucket we'll be using as blob storage"
 }
 
-output "sagemaker_s3_bucket_arn" {
+output "metaflow_s3_bucket_arn" {
   value       = module.metaflow-datastore.s3_bucket_arn
   description = "The ARN of the bucket we'll be using as blob storage"
 }
 
-output "sagemaker_s3_bucket_policy" {
+output "metaflow_s3_bucket_policy" {
   value       = module.metaflow-datastore.metaflow_s3_policy_arn
   description = "Policy grants access to the Metaflow S3 bucket used for blob storage by the Datastore"
 }
 
-output "sagemaker_s3_bucket_kms_key_policy" {
+output "metaflow_s3_bucket_kms_key_policy" {
   value       = module.metaflow-datastore.metaflow_kms_s3_policy_arn
   description = "The ARN of the KMS key used to encrypt the Metaflow datastore S3 bucket"
 }
 
-output "sagemaker_api_gateway_rest_api_id" {
+output "metaflow_api_gateway_rest_api_id" {
   value       = module.metaflow-metadata-service.api_gateway_rest_api_id
   description = "The ID of the API Gateway REST API we'll use to accept MetaData service requests to forward to the Fargate API instance"
 }

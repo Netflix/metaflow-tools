@@ -9,8 +9,8 @@ resource "aws_sagemaker_notebook_instance_lifecycle_configuration" "this" {
   on_start = base64encode(
     <<EOF
 #!/bin/bash
-echo 'export METAFLOW_DATASTORE_SYSROOT_S3=s3://${data.terraform_remote_state.metaflow.outputs.sagemaker_s3_bucket_name}/metaflow/' >> /etc/profile.d/jupyter-env.sh
-echo 'export METAFLOW_DATATOOLS_S3ROOT=s3://${data.terraform_remote_state.metaflow.outputs.sagemaker_s3_bucket_name}/data/' >> /etc/profile.d/jupyter-env.sh
+echo 'export METAFLOW_DATASTORE_SYSROOT_S3=s3://${data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_name}/metaflow/' >> /etc/profile.d/jupyter-env.sh
+echo 'export METAFLOW_DATATOOLS_S3ROOT=s3://${data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_name}/data/' >> /etc/profile.d/jupyter-env.sh
 echo 'export METAFLOW_SERVICE_URL=${data.terraform_remote_state.metaflow.outputs.METAFLOW_SERVICE_INTERNAL_URL}' >> /etc/profile.d/jupyter-env.sh
 echo 'export AWS_DEFAULT_REGION=${var.aws_region}' >> /etc/profile.d/jupyter-env.sh
 echo 'export METAFLOW_DEFAULT_DATASTORE=s3' >> /etc/profile.d/jupyter-env.sh
