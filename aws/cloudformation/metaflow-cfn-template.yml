@@ -53,7 +53,7 @@ Parameters:
     Type: String
     Default: 'false'
     AllowedValues: ['false', 'true']
-    Description: 'Enable basic auth for API Gateway? (requires key export)'
+    Description: 'Enable basic auth for API Gateway? (requires key export). Note that if you don''t enable basic auth, the API endpoint will be open to the world.'
   EnableSagemaker:
     Type: String
     Default: 'true'
