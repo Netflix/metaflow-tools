@@ -134,6 +134,15 @@ resource "aws_iam_role_policy_attachment" "batch_service_role_metaflow" {
   policy_arn = var.metaflow_policy_arn
 }
 
+# If step functions are enabled, add permission to access dynamodb table
+# https://github.com/Netflix/metaflow-tools/blob/master/aws/cloudformation/metaflow-cfn-template.yml#L1066
+resource "aws_iam_role_policy" "step_functions_dynamodb" {
+  count  = var.enable_step_functions ? 1 : 0
+  name   = "Dynamodb"
+  role   = aws_iam_role.batch_service_role.name
+  policy = var.metaflow_step_functions_dynamodb_policy
+}
+
 /*
  Attach policy AmazonEC2ContainerServiceforEC2Role to ecs_instance_role. The
  policy is what the role is allowed to do similar to rwx for a user.

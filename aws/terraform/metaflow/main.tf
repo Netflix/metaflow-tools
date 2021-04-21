@@ -62,6 +62,7 @@ module "metaflow-computation" {
   subnet_private_2_id                               = data.terraform_remote_state.infra.outputs.subnet_private_2_id
   s3_kms_policy_arn                                 = module.metaflow-datastore.metaflow_kms_s3_policy_arn
   metaflow_policy_arn                               = data.terraform_remote_state.infra.outputs.metaflow_policy_arn
+  metaflow_step_functions_dynamodb_policy           = module.metaflow-step-functions.metaflow_step_functions_dynamodb_policy
   batch_compute_environment_cpu_max_vcpus           = var.cpu_max_compute_vcpus
   batch_compute_environment_cpu_desired_vcpus       = var.cpu_desired_compute_vcpus
   batch_compute_environment_cpu_min_vcpus           = var.cpu_min_compute_vcpus
@@ -71,6 +72,7 @@ module "metaflow-computation" {
   batch_compute_environment_gpu_max_vcpus           = var.gpu_max_compute_vcpus
   batch_compute_environment_gpu_desired_vcpus       = var.gpu_desired_compute_vcpus
   batch_compute_environment_gpu_min_vcpus           = var.gpu_min_compute_vcpus
+  enable_step_functions                             = var.enable_step_functions
 
   standard_tags = module.common_vars.tags
 }

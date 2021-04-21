@@ -134,3 +134,14 @@ variable "batch_gpu_instance_types" {
     "g4dn.8xlarge"
   ]
 }
+
+variable "metaflow_step_functions_dynamodb_policy" {
+  type        = string
+  description = "IAM policy allowing access to the step functions dynamodb policy"
+}
+
+variable "enable_step_functions" {
+  default     = false
+  description = "If true, apply policies required for step functions"
+  type        = bool
+}

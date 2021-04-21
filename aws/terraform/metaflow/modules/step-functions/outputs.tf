@@ -12,3 +12,8 @@ output "metaflow_step_functions_dynamodb_table_name" {
   value       = join("", [for name in aws_dynamodb_table.step_functions_state_table.*.name : name])
   description = "AWS DynamoDB table name for tracking AWS Step Functions execution metadata."
 }
+
+output "metaflow_step_functions_dynamodb_policy" {
+  value       = var.active ? data.aws_iam_policy_document.step_functions_dynamodb.json : ""
+  description = "Policy json allowing access to the step functions dynamodb table."
+}
