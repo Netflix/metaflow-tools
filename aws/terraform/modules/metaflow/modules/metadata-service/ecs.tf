@@ -11,12 +11,12 @@ resource "aws_ecs_cluster" "this" {
 }
 
 resource "aws_ecs_task_definition" "this" {
-  family = "${var.resource_prefix}-service-${var.resource_suffix}" # Unique name for task definition
+  family = "${var.resource_prefix}service${var.resource_suffix}" # Unique name for task definition
 
   container_definitions = <<EOF
 [
   {
-    "name": "${var.resource_prefix}-service-${var.resource_suffix}",
+    "name": "${var.resource_prefix}service${var.resource_suffix}",
     "image": "netflixoss/metaflow_metadata_service",
     "essential": true,
     "cpu": 512,
@@ -62,7 +62,7 @@ EOF
 }
 
 resource "aws_ecs_service" "this" {
-  name            = "${var.resource_prefix}-metadata-service-${var.resource_suffix}"
+  name            = "${var.resource_prefix}metadata-service${var.resource_suffix}"
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.this.arn
   desired_count   = 1
@@ -76,7 +76,7 @@ resource "aws_ecs_service" "this" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.this.arn
-    container_name   = "${var.resource_prefix}-service-${var.resource_suffix}"
+    container_name   = "${var.resource_prefix}service${var.resource_suffix}"
     container_port   = 8080
   }
 

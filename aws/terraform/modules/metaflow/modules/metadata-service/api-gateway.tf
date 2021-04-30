@@ -27,7 +27,7 @@ resource "aws_api_gateway_rest_api_policy" "this" {
 }
 
 resource "aws_api_gateway_rest_api" "this" {
-  name        = "${var.resource_prefix}-api-${var.resource_suffix}"
+  name        = "${var.resource_prefix}api${var.resource_suffix}"
   description = "Allows access to the Metadata service RDS instance"
 
   tags = var.standard_tags
@@ -40,7 +40,7 @@ resource "aws_api_gateway_resource" "this" {
 }
 
 resource "aws_api_gateway_vpc_link" "this" {
-  name        = "${var.resource_prefix}-vpclink-${var.resource_suffix}"
+  name        = "${var.resource_prefix}vpclink${var.resource_suffix}"
   target_arns = [aws_lb.this.arn]
 
   tags = var.standard_tags

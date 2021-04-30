@@ -138,7 +138,7 @@ data "aws_iam_policy_document" "step_functions_dynamodb" {
 
 resource "aws_iam_role" "step_functions_role" {
   count              = var.active ? 1 : 0
-  name               = "${var.resource_prefix}-step_functions_role-${var.resource_suffix}-${data.aws_region.current.name}"
+  name               = "${var.resource_prefix}step_functions_role${var.resource_suffix}"
   description        = "IAM role for AWS Step Functions to access AWS resources (AWS Batch, AWS DynamoDB)."
   assume_role_policy = data.aws_iam_policy_document.step_functions_assume_role_policy.json
 

@@ -37,7 +37,7 @@ resource "aws_security_group" "metadata_service_security_group" {
 }
 
 resource "aws_lb" "this" {
-  name               = "${var.resource_prefix}-nlb-${var.resource_suffix}"
+  name               = "${var.resource_prefix}nlb${var.resource_suffix}"
   internal           = true
   load_balancer_type = "network"
   subnets            = [var.subnet_private_1_id, var.subnet_private_2_id]
@@ -46,7 +46,7 @@ resource "aws_lb" "this" {
 }
 
 resource "aws_lb_target_group" "this" {
-  name        = "${var.resource_prefix}-trgtgrp-${var.resource_suffix}"
+  name        = "${var.resource_prefix}trgtgrp${var.resource_suffix}"
   port        = 8080
   protocol    = "TCP"
   target_type = "ip"

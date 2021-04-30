@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 module "common_vars" {
-  source = "../common"
+  source = "../modules/common"
 
   app = var.app
   env = var.env

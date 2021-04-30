@@ -62,21 +62,21 @@ resource "aws_db_instance" "this" {
   kms_key_id                = aws_kms_key.rds.arn
   engine                    = "postgres"
   engine_version            = "11.10"
-  instance_class            = var.db_instance_type                                           # Hardware configuration
-  identifier                = "${var.resource_prefix}-${var.db_name}-${var.resource_suffix}" # used for dns hostname needs to be customer unique in region
-  name                      = var.db_name                                                    # unique id for CLI commands (name of DB table which is why we're not adding the prefix as no conflicts will occur and the API expects this table name)
+  instance_class            = var.db_instance_type                                         # Hardware configuration
+  identifier                = "${var.resource_prefix}${var.db_name}${var.resource_suffix}" # used for dns hostname needs to be customer unique in region
+  name                      = var.db_name                                                  # unique id for CLI commands (name of DB table which is why we're not adding the prefix as no conflicts will occur and the API expects this table name)
   username                  = var.db_username
   password                  = random_password.this.result
   db_subnet_group_name      = aws_db_subnet_group.this.id
-  max_allocated_storage     = 1000                                                                          # Upper limit of automatic scaled storage
-  multi_az                  = true                                                                          # Multiple availability zone?
-  final_snapshot_identifier = "${var.resource_prefix}-${var.db_name}-final-snapshot-${var.resource_suffix}" # Snapshot upon delete
+  max_allocated_storage     = 1000                                                                                                                    # Upper limit of automatic scaled storage
+  multi_az                  = true                                                                                                                    # Multiple availability zone?
+  final_snapshot_identifier = "${var.resource_prefix}${var.db_name}-final-snapshot${var.resource_suffix}-${formatdate("YYYYMMMDDhhmm", timestamp())}" # Snapshot upon delete
   vpc_security_group_ids    = [aws_security_group.rds_security_group.id]
 
   tags = merge(
     var.standard_tags,
     {
-      Name     = "${var.resource_prefix}-${var.db_name}-${var.resource_suffix}"
+      Name     = "${var.resource_prefix}${var.db_name}${var.resource_suffix}"
       Metaflow = "true"
     }
   )

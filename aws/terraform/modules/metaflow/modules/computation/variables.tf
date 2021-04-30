@@ -130,8 +130,7 @@ variable "batch_gpu_instance_types" {
   type        = list(string)
   description = "EC2 instance types allowed for GPU Batch jobs. Types can be explicitly or implicitly requested by data scientists."
   default = [
-    "p3.2xlarge",
-    "g4dn.8xlarge"
+    "p3.2xlarge"
   ]
 }
 

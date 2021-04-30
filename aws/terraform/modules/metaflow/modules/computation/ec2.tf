@@ -5,7 +5,7 @@ resource "aws_launch_template" "this" {
 
      This is used for all Metaflow AWS Batch remote jobs.
   */
-  name = "${var.resource_prefix}-batch-launch-template-100gb-${var.resource_suffix}"
+  name = "${var.resource_prefix}batch-launch-template-100gb${var.resource_suffix}"
 
   # Defines what IAM Role to assume to grant an EC2 instance
   # This role must have a policy to access the kms_key_id used to encrypt the EBS volume
