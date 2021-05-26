@@ -15,13 +15,20 @@ variable "aws_region" {
   description = "AWS region we will deploy to."
 }
 
-variable "base_s3_data_sets_bucket_name" {
+variable "vpc_cidr" {
   type        = string
-  description = "Base name of S3 bucket to create to store external datasets/artifacts."
+  default     = "10.0.32.0/20"
+  description = "Amazon VPC cidr block"
 }
 
-variable "vpc_flow_log_s3_destination" {
+variable "subnet1_cidr" {
   type        = string
-  description = "The ARN of the S3 bucket to receive VPC flow logs."
-  default     = ""
+  default     = "10.0.0.0/20"
+  description = "Private subnet1 cidr block"
+}
+
+variable "subnet2_cidr" {
+  type        = string
+  default     = "10.0.16.0/20"
+  description = "Private subnet1 cidr block"
 }

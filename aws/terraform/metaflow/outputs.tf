@@ -43,9 +43,9 @@ output "METAFLOW_SFN_DYNAMO_DB_TABLE" {
   description = "AWS DynamoDB table name for tracking AWS Step Functions execution metadata."
 }
 
-output "metaflow_profile_json" {
-  value       = module.metaflow.metaflow_profile_json
-  description = "Metaflow profile JSON object that can be used to communicate with this Metaflow Stack. Store this in `~/.metaflow/config_[stack-name]` and select with `$ export METAFLOW_PROFILE=[stack-name]`."
+output "metaflow_profile_configuration" {
+  value       = "Run this command in a shell to import the Metaflow configuration: metaflow configure import ${path.module}/${local.metaflow_config_filename}"
+  description = "Instructions to import the generated Metaflow configuration"
 }
 
 # output for sagemaker notebook project

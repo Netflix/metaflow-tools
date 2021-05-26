@@ -11,7 +11,7 @@ resource "aws_vpc" "this" {
 }
 
 /*
- Setup a gateway between aws VPC and internet. Allow access to and from Resources
+ Setup a gateway between Amazon VPC and internet. Allow access to and from resources
  in subnet with public IP addr.
  Ref: https://nickcharlton.net/posts/terraform-aws-vpc.html
 */
@@ -27,19 +27,19 @@ resource "aws_internet_gateway" "this" {
 }
 
 /*
- Grants us ability to yield different availability zones for a region
+ Grant us ability to yield different availability zones for a region
 */
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
 /*
- Create a public Subnet that the two follow private Subnets can use for internet egress connections.
+ Create a public subnet that the two private subnets can use for internet egress connections.
  Contains our NAT Gateway.
 */
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.this.id
-  cidr_block              = "10.0.32.0/20"
+  cidr_block              = var.vpc_cidr
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
 
@@ -75,7 +75,7 @@ resource "aws_nat_gateway" "metaflow_nat_gateway" {
 
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.this.id
-  cidr_block        = "10.0.0.0/20"
+  cidr_block        = var.subnet1_cidr
   availability_zone = data.aws_availability_zones.available.names[0]
 
   tags = merge(
@@ -89,7 +89,7 @@ resource "aws_subnet" "private_1" {
 
 resource "aws_subnet" "private_2" {
   vpc_id            = aws_vpc.this.id
-  cidr_block        = "10.0.16.0/20"
+  cidr_block        = var.subnet2_cidr
   availability_zone = data.aws_availability_zones.available.names[1]
 
   tags = merge(
@@ -114,7 +114,7 @@ resource "aws_route_table" "public" {
 }
 
 /*
- Maps all traffic to the internet gateway for egress.
+ Map all traffic to the internet gateway for egress.
  This allows all traffic to appear to come from the associated EIP.
 */
 resource "aws_route" "this" {
@@ -147,13 +147,4 @@ resource "aws_route_table_association" "public_a" {
 resource "aws_route_table_association" "public_b" {
   subnet_id      = aws_subnet.private_2.id
   route_table_id = aws_route_table.private.id
-}
-
-resource "aws_flow_log" "main_vpc" {
-  count                = length(var.vpc_flow_log_s3_destination) > 0 ? 1 : 0
-  vpc_id               = aws_vpc.this.id
-  traffic_type         = "ALL"
-  log_destination_type = "s3"
-  log_destination      = var.vpc_flow_log_s3_destination
-  tags                 = module.common_vars.tags
 }

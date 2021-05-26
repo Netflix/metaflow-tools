@@ -10,7 +10,4 @@ locals {
 
   # Name of second private subnet.
   subnet_private_2_name = "${local.resource_prefix}-ecs-subnet-${local.resource_suffix}"
-
-  # Name of datasets s3 bucket
-  datasets_s3_bucket_name = "${local.resource_prefix}-datasets-${local.resource_suffix}"
 }

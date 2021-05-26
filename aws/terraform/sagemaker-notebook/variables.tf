@@ -16,6 +16,6 @@ variable "aws_region" {
 
 variable "ec2_instance_type" {
   type        = string
-  description = "EC2 instance type used to stand up SageMaker instance"
+  description = "Amazon EC2 instance type used to stand up SageMaker instance"
   default     = "ml.t3.medium"
 }

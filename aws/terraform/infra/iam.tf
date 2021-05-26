@@ -3,22 +3,6 @@ data "aws_iam_policy_document" "metaflow" {
     effect = "Allow"
 
     actions = [
-      "s3:ListBucket",
-      "s3:GetObject",
-      "s3:DeleteObject",
-      "s3:PutObject"
-    ]
-
-    resources = [
-      aws_s3_bucket.data_sets.arn,
-      "${aws_s3_bucket.data_sets.arn}/*"
-    ]
-  }
-
-  statement {
-    effect = "Allow"
-
-    actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey"
     ]
