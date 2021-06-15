@@ -1,0 +1,385 @@
+
+# Help
+
+- name: Dummy rule to define help anchors
+  event_type: never match
+  message: &helpmessage help(.*)|how to(.*)
+  action:
+    message: &helptext >
+      Hey, I am Metaflowbot! I can help you to manage Metaflow
+      runs and inspect results of past runs.
+
+
+      If you want to inspect results, type the following commands
+      for more information: `how to inspect run` and `how to inspect`.
+
+
+      If you want to execute one or more Metaflow runs, start with
+      `how to use code` which shows how to choose the code to run.
+      After this, you may want to try `how to set parameters`.
+
+
+      Note that all discussions with me should happen in a thread.
+      You can open a new thread with me e.g. by saying `@metaflow
+      hey` on any channel. You can open multiple threads with
+      me if you want to. Each thread is an independent discussion.
+
+
+      If you have any trouble, feel free to ask for (human) help
+      at the <#C7P782J02|ask-mli> channel.
+
+- name: First message of the thread, requesting help
+  event_type: new_thread
+  message: *helpmessage
+  action:
+    op: new-thread
+    greeting: *helptext
+
+# New thread
+
+- name: First message of the thread
+  event_type: new_thread
+  action:
+    op: new-thread
+    greeting:
+      Hey! Do you want to inspect an existing
+      run (type `inspect`) or start one or more new runs
+      (type `run`)?
+
+# Run
+
+- name: Run but no flow specified
+  event_type: user_message
+  message: run(.*)
+  context:
+    use_code.run_id: null
+  action:
+    op: reply
+    message:
+      To be able to start a new run, you need to specify
+      the exact version of the code to run. The easiest way to
+      do this is to clone an existing run. You can do this
+      e.g. by saying `use code from the latest run of HelloFlow`.
+      For other options, type `how to use code`.
+
+- name: Run already started
+  event_type: user_message
+  message: run(.*)
+  context:
+    is_running: true
+  action:
+    op: reply
+    message:
+      There is a run already running. Try `show status` to get
+      more information about it. You can type `cancel`
+      to cancel the existing run.
+
+- name: Start a run
+  event_type: user_message
+  message: run(.*)
+  action:
+    op: run
+    code-run-id: '{context[use_code.run_id]}'
+    parameters: '{context[parameters]}'
+    parameter-csv: '{context[parameter_csv]}'
+    username: '{event.user_name}'
+    tags: 'metaflowbot,thread:{event.thread_ts},channel:{event.chan_name}'
+  ephemeral_context_update:
+    is_running: true
+
+# Lost process (internal event)
+
+- name: Run process lost
+  event_type: lost_process
+  action:
+    op: cleanup-lost-run
+    fingerprint: '{event.msg}'
+
+# Cancel runs
+
+- name: Cancel runs
+  event_type: user_message
+  message: cancel(.*)
+  context:
+    is_running: true
+  action:
+    op: cancel-runs
+    # note that rungroup_id may be null here if the user
+    # cancels quickly after starting a run, it is ok
+    rungroup-id: '{context[rungroup_id]}'
+
+- name: Cancel but nothing running
+  event_type: user_message
+  message: cancel(.*)
+  action:
+    op: reply
+    message:
+      It seems nothing is running, so there's nothing to cancel.
+
+# Show run status
+
+- name: Show runs but no rungroup
+  event_type: user_message
+  message: show status(.*)
+  context:
+    rungroup_id: null
+  action:
+    op: reply
+    message:
+      It seems nothing is running, so there's no run status to show.
+
+- name: Show run status
+  event_type: user_message
+  message: show status(.*)
+  context:
+    is_running: true
+  action:
+    op: run-status
+    rungroup-id: '{context[rungroup_id]}'
+
+- name: Show run but run has finished already
+  event_type: user_message
+  message: show status(.*)
+  action:
+    op: reply
+    message:
+      The runs have finished, so there is nothing to show. You can inspect
+      results of the finished run with `inspect`.
+
+# Quiet run status updates
+
+- name: Disable automatic run status updates but no rungroup
+  event_type: user_message
+  message: quiet
+  context:
+    rungroup_id: null
+  action:
+    op: reply
+    message:
+      It seems nothing is running, so there's nothing to quiet.
+
+- name: Disable automatic run status updates
+  event_type: user_message
+  message: quiet
+  action:
+    op: quiet-run
+    rungroup-id: '{context[rungroup_id]}'
+
+# Use code
+
+- name: Use code
+  event_type: user_message
+  message: use code(.*)
+  action:
+    op: use-code
+    codespec: '{event.msg}'
+
+- name: How to use code
+  event_type: user_message
+  message: how to use code(.*)
+  action:
+    op: use-code
+    howto: true
+
+# Parameters
+
+- name: Remind about parameters after setting code
+  event_type: state_change
+  state_change:
+    type: set
+    key: use_code.run_id
+  context:
+    parameters: null
+  action:
+    op: reply
+    message:
+      You can now set parameters for your run(s). See
+      `how to set parameters` for instructions. If your run
+      does not require parameters, you can start it with `run`.
+
+- name: Show parameters but no code set
+  event_type: user_message
+  message: show parameters
+  context:
+    use_code.run_id: null
+  action:
+    op: reply
+    message:
+      You need to set the exact version of the code to run first,
+      so I know what parameters to show. Type `how to use code`
+      for instructions how to set the code version.
+
+- name: Show parameters
+  event_type: user_message
+  message: show parameters
+  action:
+    op: parameters
+    code-run-id: '{context[use_code.run_id]}'
+    existing: '{context[parameters]}'
+    existing-csv: '{context[parameter_csv]}'
+    show: true
+
+- name: Set parameter but no code set
+  event_type: user_message
+  message: set parameter.*
+  context:
+    use_code.run_id: null
+  action:
+    op: reply
+    message:
+      You need to set the exact version of the code to run first,
+      so I know what parameters to set. Type `how to use code`
+      for instructions how to set the code version.
+
+- name: Set parameter
+  event_type: user_message
+  message: set parameter (.*?) to (.*)
+  action:
+    op: parameters
+    code-run-id: '{context[use_code.run_id]}'
+    key: '{message_group[0]}'
+    value: '{message_group[1]}'
+    existing-csv: '{context[parameter_csv]}'
+
+- name: Set parameter CSV
+  event_type: user_message
+  message: set parameters from (.*)
+  action:
+    op: parameters
+    code-run-id: '{context[use_code.run_id]}'
+    parameter-csv: '{message_group[0]}'
+
+- name: Set parameter syntax issue
+  event_type: user_message
+  message: set parameter.*
+  action:
+    op: parameters
+    howto: true
+
+- name: How to set parameters
+  event_type: user_message
+  message: how to .*parameters?
+  action:
+    op: parameters
+    howto: true
+
+# Inspect run
+
+- name: Define a run to be inspected
+  event_type: user_message
+  message: inspect run (.+)
+  action:
+    op: inspect-run
+    runspec: '{event.msg}'
+
+- name: Inspect run without an argument and no run set, show help
+  event_type: user_message
+  message: inspect run
+  context:
+    inspect.run_id: null
+  action:
+    op: inspect-run
+    howto: true
+
+- name: Inspect run without an argument but a run is set, basic inspect
+  event_type: user_message
+  message: inspect run
+  action:
+    op: inspect
+    run-id: '{context[inspect.run_id]}'
+
+# Inspect data
+
+- name: Inspect data but no run set, show help
+  event_type: user_message
+  message: inspect data(.*)
+  context:
+    inspect.run_id: null
+  action:
+    op: inspect-run
+    howto: true
+
+- name: Inspect data with an argument
+  event_type: user_message
+  message: inspect data at (.+)
+  action:
+    op: inspect-data
+    run-id: '{context[inspect.run_id]}'
+    step: '{message_group[0]}'
+
+- name: Inspect data without an argument, show help
+  event_type: user_message
+  message: inspect data(.*)
+  action:
+    op: inspect
+    howto: true
+
+# Inspect logs
+
+- name: Inspect logs but no run set, show help
+  event_type: user_message
+  message: inspect logs(.*)
+  context:
+    inspect.run_id: null
+  action:
+    op: inspect_run
+    howto: true
+
+- name: Inspect logs with an argument
+  event_type: user_message
+  message: inspect logs at (.+)
+  action:
+    op: inspect-logs
+    run-id: '{context[inspect.run_id]}'
+    step: '{message_group[0]}'
+
+- name: Inspect logs without an argument, show help
+  event_type: user_message
+  message: inspect data(.*)
+  action:
+    op: inspect
+    howto: true
+
+# Inspect
+
+- name: Inspect but no run set
+  event_type: user_message
+  message: inspect
+  context:
+    inspect.run_id: null
+  action:
+    op: inspect-run
+    howto: true
+
+- name: Inspect the chosen run
+  event_type: user_message
+  message: inspect
+  action:
+    op: inspect
+    run-id: '{context[inspect.run_id]}'
+
+- name: How to inspect run
+  event_type: user_message
+  message: how to inspect run
+  action:
+    op: inspect-run
+    howto: true
+
+- name: How to inspect (fallback)
+  event_type: user_message
+  message: how to inspect(.*)
+  action:
+    op: inspect
+    howto: true
+
+# Help fallback when no other 'how to's or helps match
+
+- name: Generic help fallback
+  event_type: user_message
+  message: *helpmessage
+  action:
+    op: reply
+    message: *helptext
+
+
+
