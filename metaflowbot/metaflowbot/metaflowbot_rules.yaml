@@ -46,7 +46,7 @@
       run (type `inspect`) or start one or more new runs
       (type `run`)?
 
-# Run
+# Run (X)
 
 - name: Run but no flow specified
   event_type: user_message
@@ -146,7 +146,7 @@
       The runs have finished, so there is nothing to show. You can inspect
       results of the finished run with `inspect`.
 
-# Quiet run status updates
+# Quiet run status updates (X)
 
 - name: Disable automatic run status updates but no rungroup
   event_type: user_message
@@ -165,7 +165,7 @@
     op: quiet-run
     rungroup-id: '{context[rungroup_id]}'
 
-# Use code
+# Use code (X)
 
 - name: Use code
   event_type: user_message
@@ -181,7 +181,7 @@
     op: use-code
     howto: true
 
-# Parameters
+# Parameters (X)
 
 - name: Remind about parameters after setting code
   event_type: state_change
