@@ -92,22 +92,38 @@ Slack also has a python API called [BOLT](https://github.com/slackapi/bolt-pytho
 
 ## Design Questions 
 
-1. `MFBServer.reconstruct_state()` within [metaflowbot/server.py](metaflowbot/server.py) will reconstruct the state using the slack channel on restart and will store state generally in Memory. There are a few questions that are worth exploring based on this: 
-    - What happens when there are too many messages after lots of time ? Can there be a memory leak if the state is in memory all the time ?
-    - Should Slack only be fallback on server nuking? Can we use a pure-python db like [tinydb](https://tinydb.readthedocs.io/en/latest/intro.html#introduction) for a little more scalability on state maintenance front without too many additional installations and ensuring that there is very limited state in memory. 
+> `MFBServer.reconstruct_state()` within [metaflowbot/server.py](metaflowbot/server.py) will reconstruct the state using the slack channel on restart and will store state generally in Memory. There are a few questions that are worth exploring based on this: 
+    > What happens when there are too many messages after lots of time ? Can there be a memory leak if the state is in memory all the time ?
+    > Should Slack only be fallback on server nuking? Can we use a pure-python db like [tinydb](https://tinydb.readthedocs.io/en/latest/intro.html#introduction) for a little more scalability on state maintenance front without too many additional installations and ensuring that there is very limited state in memory. 
 
-2. BOLT vs slack_sdk Trade-offs:
-    - BOLT is built on top of `python-slack-sdk`
-    - BOLT seems to be what slack has been promoting since recent and was in beta in [October 2020](https://twitter.com/slackapi/status/1313895056592433152?lang=en). 
-    - BOLT has a decorator based function annotation setup and current class like setup for the slack client might need a refactor. 
-    - [`python-slack-sdk`](https://github.com/slackapi/python-slack-sdk/tree/main/tutorial) also has an annotation based event handling setup, but the BOLT API seems much more ergonomic.
+- Footprint should be small. Holding state in memory shouldn't be a problem. 
 
-3. Should the Bot be allowed to customizable name ? 
+> BOLT vs slack_sdk Trade-offs:
+    > BOLT is built on top of `python-slack-sdk`
+    > BOLT seems to be what slack has been promoting since recent and was in beta in [October 2020](https://twitter.com/slackapi/status/1313895056592433152?lang=en). 
+    > BOLT has a decorator based function annotation setup and current class like setup for the slack client might need a refactor. 
+    > [`python-slack-sdk`](https://github.com/slackapi/python-slack-sdk/tree/main/tutorial) also has an annotation based event handling setup, but the BOLT API seems much more ergonomic.
 
-4. Can the bot be reconfigured in the future from the slack channel itself with a Configuration file provided directly on the slack channel to switch context of flows one can observe ? 
+- TODO: Evaluate granular tradeoffs for `python-slack-sdk` and `BOLT`.
 
-5. Can we correlate the user asking the bot about the flows with the actual user that metaflow may have stored ? Would this be useful ?
+> Should the Bot be allowed to customizable name ? 
 
+- Yes
+
+> Can the bot be reconfigured in the future from the slack channel itself with a Configuration file provided directly on the slack channel to switch context of flows one can observe ? 
+
+-  One can just have a bunch of Metaflow profiles and then in a Slack thread you can 
+say e.g.
+```
+inspect flows from finance_department
+```
+and then we pass `--metaflow-profile=finance_department` to an action
+
+
+> Can we correlate the user asking the bot about the flows with the actual user that metaflow may have stored ? Would this be useful ?
+
+- Correlating users would be nice but it is really hard in practice unless the company uses the same identity provider everywhere.
+- Maybe find a way to list users and filter flows based on the user.
 ## References:
 
 1. https://www.digitalocean.com/community/tutorials/how-to-build-a-slackbot-in-python-on-ubuntu-20-04
