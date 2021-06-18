@@ -56,6 +56,80 @@ class MFBRateLimitException(MFBClientException):
 class MFBRateLimitException(MFBClientException):
     pass
 
+
+class MFBSlackClientV2(object):
+    def __init__(self) -> None:
+        # Todo : plug in appropriate slack_sdk OR Bolt. 
+        # self.sc = 
+        self.rtm_connected = False
+        self._last_rtm_events = 0
+
+    def bot_user_id(self):
+        # TODO : permission : auth.test
+        pass
+
+    def post_message(self, msg, channel, thread=None, attachments=None):
+        # TODO : This function is wrapper to throw a message into a channel. 
+        # This function is important because the CLI wrapper with click and the 
+        # MFBServer will use this to put messages in admin thread and actual user threads. 
+        pass
+
+    def upload_file(self, path, channel, thread=None):
+        # TODO : permission : files.upload
+        pass
+
+    def rtm_events(self):
+        # TODO : create a event reader
+        pass
+
+    def im_channel(self, user):
+        # TODO : permission : im.open
+        pass
+
+    def user_by_email(self, email):
+        # TODO : permission : users.lookupByEmail
+        pass
+
+    def user_info(self, user):
+        # TODO : permission : users.info
+        pass
+
+    def channel_info(self, channel):
+        # TODO : permission : channels.info
+        pass
+
+    def direct_channels(self):
+        # TODO : permission : im.list, ims
+        pass
+
+    def past_events(self, channel, **opts):
+        # TODO : permission : conversations.history, messages
+        pass
+
+    def past_replies(self, channel, thread, **opts):
+        # TODO : permission : conversations.replies, messages
+        pass
+
+    def download_file(self, file_permalink):
+        # TODO : permission : files.info
+        pass
+
+    def _format_history(self, events, max_number=None, sort_key='ts'):
+        # TODO : fix event order and constrain the number of events 
+        pass
+
+    def _page_iter(self, method, it_field, **args):
+        # TODO : validate if this method is needed. 
+        pass
+
+    def _request_file(self, url):
+        # TODO : validate if this method is needed. 
+        pass
+
+    def _request(self, method, raise_on_error=False, **args):
+        # TODO : validate if this method is needed. 
+        pass
+
 class MFBSlackClient(object):
 
     def __init__(self, slack_token):

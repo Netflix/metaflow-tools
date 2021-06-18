@@ -46,7 +46,7 @@ class FormatFriendlyDict(object):
 
 class MFBServer(object):
 
-    def __init__(self, slack_client, admin_email, rules, logger, action_user):
+    def __init__(self, slack_client:MFBSlackClient, admin_email, rules, logger, action_user):
         self.sc = slack_client
         self.state = MFBState()
         self.dm_token = '<@%s>' % self.sc.bot_user_id()
@@ -68,6 +68,12 @@ class MFBServer(object):
                              thread=ts)
 
     def reconstruct_state(self):
+        """reconstruct_state 
+        On restart, State is reconstructed using a slack channel that has 
+        the dump of all messages. 
+        
+        :raises MFBException: [description]
+        """
         for event in self._state_event_log():
             self._update_state(event)
             self.admin_thread = event.thread_ts
@@ -114,6 +120,11 @@ class MFBServer(object):
                 time.sleep(1)
 
     def _lost_process_events(self):
+        """_lost_process_events [summary]
+
+        :yield: [description]
+        :rtype: [type]
+        """
         now = time.time()
         lost = {}
         for fingerprint, thread in self.state.get_monitors():
@@ -242,6 +253,7 @@ class MFBServer(object):
         env = {'LANG': 'C.UTF-8',
                'LC_ALL': 'C.UTF-8'}
 
+        # TODO : What does this Line Mean  ?
         # use a custom cache location, to make sure our
         # action user has permissions to use it
         env['METAFLOW_CLIENT_CACHE'] = 'metaflow_client_cache'
@@ -253,9 +265,11 @@ class MFBServer(object):
 
         if 'PYTHONPATH' in os.environ:
             env['PYTHONPATH'] = os.environ['PYTHONPATH']
+        # TODO : Remove this line. 
         if 'NETFLIX_ENVIRONMENT' in os.environ:
             env['NETFLIX_ENVIRONMENT'] = os.environ['NETFLIX_ENVIRONMENT']
 
+        # TODO : Check if this line is necessary. Figure if sudo access is necessary ? 
         if self.action_user:
             cmd = ['sudo', '-u', self.action_user]
             cmd.extend('%s=%s' % kv for kv in env.items())
@@ -264,6 +278,7 @@ class MFBServer(object):
         cmd += [sys.executable,
                 '-m',
                 'metaflowbot',
+                # TODO : Remove slack token as it can now work well with ENV variables
                 '--slack-token',
                 self.sc.token,
                 '--admin-thread',
