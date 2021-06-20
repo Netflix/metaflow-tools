@@ -253,10 +253,9 @@ class MFBServer(object):
         env = {'LANG': 'C.UTF-8',
                'LC_ALL': 'C.UTF-8'}
 
-        # TODO : What does this Line Mean  ?
         # use a custom cache location, to make sure our
         # action user has permissions to use it
-        env['METAFLOW_CLIENT_CACHE'] = 'metaflow_client_cache'
+        env['METAFLOW_CLIENT_CACHE_PATH'] = 'metaflow_client_cache'
 
         if 'PATH' in os.environ:
             # sys.executable does not work in subprocesses
@@ -265,20 +264,11 @@ class MFBServer(object):
 
         if 'PYTHONPATH' in os.environ:
             env['PYTHONPATH'] = os.environ['PYTHONPATH']
-        # TODO : Remove this line. 
-        if 'NETFLIX_ENVIRONMENT' in os.environ:
-            env['NETFLIX_ENVIRONMENT'] = os.environ['NETFLIX_ENVIRONMENT']
 
-        # TODO : Check if this line is necessary. Figure if sudo access is necessary ? 
-        if self.action_user:
-            cmd = ['sudo', '-u', self.action_user]
-            cmd.extend('%s=%s' % kv for kv in env.items())
-        else:
-            cmd = []
+        cmd = []
         cmd += [sys.executable,
                 '-m',
                 'metaflowbot',
-                # TODO : Remove slack token as it can now work well with ENV variables
                 '--slack-token',
                 self.sc.token,
                 '--admin-thread',

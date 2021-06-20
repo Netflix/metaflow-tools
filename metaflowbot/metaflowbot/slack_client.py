@@ -1,13 +1,21 @@
 import re
 import time
 import json
+from typing import List, Optional, Union
 import urllib
 from itertools import islice
 
 import requests
+import os 
 from slackclient import SlackClient
+from slack_sdk import WebClient
+from slack_sdk.socket_mode import SocketModeClient
+from threading import Thread
+from queue import Queue
 
 from .exceptions import MFBException
+from threading import Event
+
 
 NUM_RETRIES = 3
 MIN_RTM_EVENTS_INTERVAL = 1
@@ -56,17 +64,88 @@ class MFBRateLimitException(MFBClientException):
 class MFBRateLimitException(MFBClientException):
     pass
 
+class SlackMessageQueue(Queue):
+    def __init__(self, maxsize: int) -> None:
+        super().__init__(maxsize=maxsize)
+
+    def injest(self,messages:List[dict]) -> None:
+        """injest 
+        TODO : Push Multiple messsage to Queue
+        """
+        pass
+
+    def flush(self)-> Union[List[dict],None]:
+        """flush 
+        TODO :Take all messages from the Queue and return to the caller. 
+        Essentially Empty Everything. 
+        """
+        pass
+
+
+
+class SlackSocketSubscriber(Thread):
+    """SlackSocketSubscriber 
+    This will be a daemon thread that will connect to slack and subscribe to the message feed via the `SocketModeClient`
+    This will use a message queue to keep sending messages to the main thread. 
+
+    This is a daemon thread because it should die when the program shuts and we don't care much about it once it starts
+
+    TODO : Ensure this thread runs without any kind of failure. 
+    """
+    def __init__(self,slack_token,message_queue:Queue) -> None:
+        super().__init__(daemon=True)
+        self.publisher_queue = message_queue
+        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running. 
+        self.sc = SocketModeClient(
+            # This app-level token will be used only for establishing a connection
+            app_token=os.environ.get("SLACK_APP_TOKEN"),  # xapp-A111-222-xyz
+            # ? : Do we need a WebClient here ?
+            web_client=WebClient(token=slack_token)  # xoxb-111-222-xyz
+        )
+    
+    def run(self) -> None:
+        """run 
+        TODO : wire up the socket feed and the function to filter flush items to queue
+        """
+        pass
+
+def create_slack_subscriber(slack_token:str):
+    message_queue = SlackMessageQueue()
+    socket_thread = SlackSocketSubscriber(slack_token,message_queue) 
+    socket_thread.start()
+    return message_queue
+
 
 class MFBSlackClientV2(object):
-    def __init__(self) -> None:
-        # Todo : plug in appropriate slack_sdk OR Bolt. 
-        # self.sc = 
+    """MFBSlackClientV2 
+    Replaces the `slack_client` with `slack_sdk`
+        - Leverages the `WebClient` and the `SocketModeClient` (With RTM Message subscriber)
+
+    `slack_sdk` Socket Management: 
+    https://slack.dev/python-slack-sdk/socket-mode/index.html#socketmodeclient
+
+    `slack_sdk` WebClient : 
+    https://slack.dev/python-slack-sdk/web/index.html
+
+    `SocketModeClient` leverages a Message queue which gets the RTM events. 
+    """
+    def __init__(self,slack_token) -> None:
+        # plug in appropriate slack_sdk. Ensure `slack_token` is there. 
+        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running. 
+        self.sc = WebClient(token=slack_token)  # xoxb-111-222-xyz
         self.rtm_connected = False
+        self._slack_token = slack_token
         self._last_rtm_events = 0
+        self._rmt_feed_queue = None
+
+    @property
+    def token(self):
+        return self._slack_token
+
 
     def bot_user_id(self):
-        # TODO : permission : auth.test
-        pass
+        # permission : auth.test
+        return self.sc.auth_test()['user_id']
 
     def post_message(self, msg, channel, thread=None, attachments=None):
         # TODO : This function is wrapper to throw a message into a channel. 
@@ -74,29 +153,76 @@ class MFBSlackClientV2(object):
         # MFBServer will use this to put messages in admin thread and actual user threads. 
         pass
 
+    # def event_processor
+
     def upload_file(self, path, channel, thread=None):
-        # TODO : permission : files.upload
-        pass
+        # permission : files.upload
+        args = {'channels': channel}
+        if thread:
+            args['thread_ts'] = thread
+
+        args['file'] = open(path, 'rb')
+        self.sc.files_upload(**args)
 
     def rtm_events(self):
-        # TODO : create a event reader
-        pass
+        """rtm_events 
+        this method is only called by the server to get the get the realtime 
+        events from slack. 
+
+        Version 1 used SlackClient.rtm_read() to retrieve the messages from slack with a 
+        timeout. 
+
+        Verison 2 is using SocketMode and in that light is it better to create a thread 
+        along with a message queue to keep flushing information socket consumer and the 
+        main server thread. 
+        """
+        # todo : Instantiate event reader over here. 
+        if not self.rtm_connected:
+            self._rmt_feed_queue = create_slack_subscriber(self.token)
+            self.rtm_connected = True
+        
+        return self._rmt_feed_queue.flush()
+        
 
     def im_channel(self, user):
-        # TODO : permission : im.open
-        pass
+        # permission : im.open
+        try:
+            return self.sc.im_open(user)['channel']['id']
+        except MFBRequestFailed as ex:
+            if ex.resp['error'] == 'user_not_found':
+                raise MFBUserNotFound(user)
+            else:
+                raise
 
     def user_by_email(self, email):
-        # TODO : permission : users.lookupByEmail
-        pass
+        # permission : users.lookupByEmail
+        try:
+            return self.user_by_email(email)['user']['id']
+        except MFBRequestFailed as ex:
+            if ex.resp['error'] == 'users_not_found':
+                raise MFBUserNotFound(email)
+            else:
+                raise
 
     def user_info(self, user):
-        # TODO : permission : users.info
-        pass
+        # permission : users.info
+        try:
+            return self.user_info(user)['user']
+        except MFBRequestFailed as ex:
+            if ex.resp['error'] == 'user_not_found':
+                raise MFBUserNotFound(user)
+            else:
+                raise
 
     def channel_info(self, channel):
-        # TODO : permission : channels.info
-        pass
+        # permission : channels.info
+        try:
+            return self.channel_info(channel)['channel']
+        except MFBRequestFailed as ex:
+            if ex.resp['error'] == 'user_not_found':
+                raise MFBChannelNotFound(channel)
+            else:
+                raise
 
     def direct_channels(self):
         # TODO : permission : im.list, ims
@@ -115,8 +241,11 @@ class MFBSlackClientV2(object):
         pass
 
     def _format_history(self, events, max_number=None, sort_key='ts'):
-        # TODO : fix event order and constrain the number of events 
-        pass
+        if max_number is not None:
+            events = islice(events, max_number)
+        if sort_key:
+            events = sorted(events, key=lambda x: x[sort_key])
+        return events
 
     def _page_iter(self, method, it_field, **args):
         # TODO : validate if this method is needed. 

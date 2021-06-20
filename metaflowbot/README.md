@@ -132,3 +132,5 @@ and then we pass `--metaflow-profile=finance_department` to an action
    - Blog on the `slackclient` deprecation and migration of `slack_sdk`.
 
 3. [ngrok](https://ngrok.com/) for local servers with public URLs. 
+
+4. [Slack SDK Events API FAQ](https://api.slack.com/faq#events_api)
