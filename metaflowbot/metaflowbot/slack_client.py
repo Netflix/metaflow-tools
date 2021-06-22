@@ -6,16 +6,19 @@ import urllib
 from itertools import islice
 
 import requests
+from functools import partial
 import os 
 from slackclient import SlackClient
 from slack_sdk import WebClient
 from slack_sdk.socket_mode import SocketModeClient
+from slack_sdk.socket_mode.response import SocketModeResponse
+from slack_sdk.socket_mode.request import SocketModeRequest
+from .exceptions import MFBException
+
 from threading import Thread
 from queue import Queue
 
-from .exceptions import MFBException
 from threading import Event
-
 
 NUM_RETRIES = 3
 MIN_RTM_EVENTS_INTERVAL = 1
@@ -65,23 +68,47 @@ class MFBRateLimitException(MFBClientException):
     pass
 
 class SlackMessageQueue(Queue):
-    def __init__(self, maxsize: int) -> None:
+    def __init__(self, maxsize: int = 0) -> None:
         super().__init__(maxsize=maxsize)
 
     def injest(self,messages:List[dict]) -> None:
         """injest 
-        TODO : Push Multiple messsage to Queue
+        Push Multiple messsage to Queue. \
+        Blocking to avoid Loosing messages
         """
-        pass
+        with self.mutex:
+            for m in messages:
+                self.put(m,block=True)
 
-    def flush(self)-> Union[List[dict],None]:
+    def flush(self)-> List[dict]:
         """flush 
-        TODO :Take all messages from the Queue and return to the caller. 
+        Take all messages from the Queue and return to the caller. 
         Essentially Empty Everything. 
+        https://stackoverflow.com/questions/8196254/how-to-iterate-queue-queue-items-in-python
         """
-        pass
+        with self.mutex:
+            return list(self.queue)
 
+    
+def process(queue:SlackMessageQueue,user_id:str,client: SocketModeClient, req: SocketModeRequest):
+    """
+    Some things To Think upon. 
+    1. the bot is going to start threads when there is an '@' mention;
+        - What happens when someone does a '@' mention in the thread : 
+            - If the message is coming from inside the thread then don't instantiate new thread. 
+                - **How Do I know a message is coming from within a thread ??????**
+            - If the '@' mention is coming from a channel level, then start a thread. 
+    2. This will only subscribe to `message.channels` events. 
+    3. Message body can be found here : https://api.slack.com/events/message.channels
+    """
+    if req.type == "events_api":
+        # Acknowledge the request anyway
+        # ! acknowledgement is needed to ensure messages are not Double sent
+        response = SocketModeResponse(envelope_id=req.envelope_id)
+        client.send_socket_mode_response(response)
 
+    # TODO : Check if this working properly. 
+    queue.injest([req.payload['event']])
 
 class SlackSocketSubscriber(Thread):
     """SlackSocketSubscriber 
@@ -96,19 +123,29 @@ class SlackSocketSubscriber(Thread):
         super().__init__(daemon=True)
         self.publisher_queue = message_queue
         # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running. 
+        self.slack_token = slack_token
+    
+    def run(self) -> None:
+        """run 
+        wire up the socket feed and the function to filter flush items to queue
+        """
         self.sc = SocketModeClient(
             # This app-level token will be used only for establishing a connection
             app_token=os.environ.get("SLACK_APP_TOKEN"),  # xapp-A111-222-xyz
             # ? : Do we need a WebClient here ?
-            web_client=WebClient(token=slack_token)  # xoxb-111-222-xyz
+            web_client=WebClient(token=self.slack_token)  # xoxb-111-222-xyz
         )
-    
-    def run(self) -> None:
-        """run 
-        TODO : wire up the socket feed and the function to filter flush items to queue
-        """
-        pass
+        # Add a new listener to receive messages from Slack
+        # You can add more listeners like this
+        user_id = self.sc.web_client.auth_test()['user_id']
+        # Bind the queue and user_id to ensure Message Paassig. 
+        subscriber_func = partial(process,self.publisher_queue,user_id)
+        self.sc.socket_mode_request_listeners.append(subscriber_func)
+        # Establish a WebSocket connection to the Socket Mode servers
+        self.sc.connect()
+        Event().wait()
 
+   
 def create_slack_subscriber(slack_token:str):
     message_queue = SlackMessageQueue()
     socket_thread = SlackSocketSubscriber(slack_token,message_queue) 
@@ -128,6 +165,8 @@ class MFBSlackClientV2(object):
     https://slack.dev/python-slack-sdk/web/index.html
 
     `SocketModeClient` leverages a Message queue which gets the RTM events. 
+
+    How to do threading via python API : https://slack.dev/python-slack-sdk/web/index.html
     """
     def __init__(self,slack_token) -> None:
         # plug in appropriate slack_sdk. Ensure `slack_token` is there. 
@@ -153,8 +192,6 @@ class MFBSlackClientV2(object):
         # MFBServer will use this to put messages in admin thread and actual user threads. 
         pass
 
-    # def event_processor
-
     def upload_file(self, path, channel, thread=None):
         # permission : files.upload
         args = {'channels': channel}
@@ -176,7 +213,7 @@ class MFBSlackClientV2(object):
         along with a message queue to keep flushing information socket consumer and the 
         main server thread. 
         """
-        # todo : Instantiate event reader over here. 
+        # Instantiate event reader over here. 
         if not self.rtm_connected:
             self._rmt_feed_queue = create_slack_subscriber(self.token)
             self.rtm_connected = True
