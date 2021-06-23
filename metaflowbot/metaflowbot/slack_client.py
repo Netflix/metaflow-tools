@@ -8,7 +8,6 @@ from itertools import islice
 import requests
 from functools import partial
 import os 
-from slackclient import SlackClient
 from slack_sdk import WebClient
 from slack_sdk.socket_mode import SocketModeClient
 from slack_sdk.socket_mode.response import SocketModeResponse
@@ -16,7 +15,7 @@ from slack_sdk.socket_mode.request import SocketModeRequest
 from .exceptions import MFBException
 
 from threading import Thread
-from queue import Queue
+from queue import Empty, Queue
 
 from threading import Event
 
@@ -74,11 +73,11 @@ class SlackMessageQueue(Queue):
     def injest(self,messages:List[dict]) -> None:
         """injest 
         Push Multiple messsage to Queue. \
-        Blocking to avoid Loosing messages
+        Queue.put is by default Blocking to avoid Loosing messages and has Mutex's internally. 
         """
-        with self.mutex:
-            for m in messages:
-                self.put(m,block=True)
+        for m in messages:
+            self.put(m)
+    
 
     def flush(self)-> List[dict]:
         """flush 
@@ -86,9 +85,13 @@ class SlackMessageQueue(Queue):
         Essentially Empty Everything. 
         https://stackoverflow.com/questions/8196254/how-to-iterate-queue-queue-items-in-python
         """
-        with self.mutex:
-            return list(self.queue)
-
+        try:
+            queue_items = []
+            while True:
+                queue_items.append(self.get_nowait())
+        except Empty:
+            pass
+        return queue_items
     
 def process(queue:SlackMessageQueue,user_id:str,client: SocketModeClient, req: SocketModeRequest):
     """
@@ -150,7 +153,7 @@ def create_slack_subscriber(slack_token:str):
     message_queue = SlackMessageQueue()
     socket_thread = SlackSocketSubscriber(slack_token,message_queue) 
     socket_thread.start()
-    return message_queue
+    return message_queue,socket_thread
 
 
 class MFBSlackClientV2(object):
@@ -167,6 +170,11 @@ class MFBSlackClientV2(object):
     `SocketModeClient` leverages a Message queue which gets the RTM events. 
 
     How to do threading via python API : https://slack.dev/python-slack-sdk/web/index.html
+
+    Deprecations : 
+        - `im.list` : https://api.slack.com/methods/im.list
+            - Replacements : `conversations.list` , `users.conversations`
+    
     """
     def __init__(self,slack_token) -> None:
         # plug in appropriate slack_sdk. Ensure `slack_token` is there. 
@@ -176,6 +184,7 @@ class MFBSlackClientV2(object):
         self._slack_token = slack_token
         self._last_rtm_events = 0
         self._rmt_feed_queue = None
+        self._socket_tread = None
 
     @property
     def token(self):
@@ -190,7 +199,17 @@ class MFBSlackClientV2(object):
         # TODO : This function is wrapper to throw a message into a channel. 
         # This function is important because the CLI wrapper with click and the 
         # MFBServer will use this to put messages in admin thread and actual user threads. 
-        pass
+        args = {'channel': channel}
+        if msg is not None:
+            args['text'] = msg
+        if attachments:
+            args['attachments'] = json.dumps(attachments)
+        if thread:
+            args['thread_ts'] = thread
+        return self.sc.chat_postMessage(
+            **args
+        )['ts']
+         
 
     def upload_file(self, path, channel, thread=None):
         # permission : files.upload
@@ -215,16 +234,21 @@ class MFBSlackClientV2(object):
         """
         # Instantiate event reader over here. 
         if not self.rtm_connected:
-            self._rmt_feed_queue = create_slack_subscriber(self.token)
+            self._rmt_feed_queue,self._socket_tread = create_slack_subscriber(self.token)
             self.rtm_connected = True
         
         return self._rmt_feed_queue.flush()
         
 
     def im_channel(self, user):
-        # permission : im.open
+        # Older API : im.open --> Deprecated 
+        # New API : conversations.open
+        # SCOPE:  mpim:write
+        # SCOPE:  im:write
+        # SCOPE:  groups:write
+        # SCOPE:  channels:manage
         try:
-            return self.sc.im_open(user)['channel']['id']
+            return self.sc.conversations_open(users=user)['channel']['id']
         except MFBRequestFailed as ex:
             if ex.resp['error'] == 'user_not_found':
                 raise MFBUserNotFound(user)
@@ -234,7 +258,7 @@ class MFBSlackClientV2(object):
     def user_by_email(self, email):
         # permission : users.lookupByEmail
         try:
-            return self.user_by_email(email)['user']['id']
+            return self.sc.users_lookupByEmail(email=email)['user']['id']
         except MFBRequestFailed as ex:
             if ex.resp['error'] == 'users_not_found':
                 raise MFBUserNotFound(email)
@@ -244,7 +268,7 @@ class MFBSlackClientV2(object):
     def user_info(self, user):
         # permission : users.info
         try:
-            return self.user_info(user)['user']
+            return self.sc.users_info(user=user)['user']
         except MFBRequestFailed as ex:
             if ex.resp['error'] == 'user_not_found':
                 raise MFBUserNotFound(user)
@@ -252,9 +276,10 @@ class MFBSlackClientV2(object):
                 raise
 
     def channel_info(self, channel):
-        # permission : channels.info
+        # permission : channels.info :: Deprecated 
+        # conversations.info is the required permission
         try:
-            return self.channel_info(channel)['channel']
+            return self.sc.conversations_info(channel=channel)['channel']
         except MFBRequestFailed as ex:
             if ex.resp['error'] == 'user_not_found':
                 raise MFBChannelNotFound(channel)
@@ -262,145 +287,33 @@ class MFBSlackClientV2(object):
                 raise
 
     def direct_channels(self):
-        # TODO : permission : im.list, ims
-        pass
+        """direct_channels 
+        This previously used `im.list` and `ims` as a method to get data. 
+        
+        In this version it will move to `users.conversations` or `conversations.list`
+        
+        TODO : Find out if method is needed or not. 
+        """
+        return self._page_iter(self.sc.conversations_list,'channels')
 
     def past_events(self, channel, **opts):
-        # TODO : permission : conversations.history, messages
-        pass
-
-    def past_replies(self, channel, thread, **opts):
-        # TODO : permission : conversations.replies, messages
-        pass
-
-    def download_file(self, file_permalink):
-        # TODO : permission : files.info
-        pass
-
-    def _format_history(self, events, max_number=None, sort_key='ts'):
-        if max_number is not None:
-            events = islice(events, max_number)
-        if sort_key:
-            events = sorted(events, key=lambda x: x[sort_key])
-        return events
-
-    def _page_iter(self, method, it_field, **args):
-        # TODO : validate if this method is needed. 
-        pass
-
-    def _request_file(self, url):
-        # TODO : validate if this method is needed. 
-        pass
-
-    def _request(self, method, raise_on_error=False, **args):
-        # TODO : validate if this method is needed. 
-        pass
-
-class MFBSlackClient(object):
-
-    def __init__(self, slack_token):
-        self.sc = SlackClient(slack_token)
-        self._slack_token = slack_token
-        self.rtm_connected = False
-        self._last_rtm_events = 0
-
-    @property
-    def token(self):
-        return self._slack_token
-
-    def bot_user_id(self):
-        return self._request('auth.test', raise_on_error=True)['user_id']
-
-    def post_message(self, msg, channel, thread=None, attachments=None):
-        args = {'channel': channel}
-        if msg is not None:
-            args['text'] = msg
-        if attachments:
-            args['attachments'] = json.dumps(attachments)
-        if thread:
-            args['thread_ts'] = thread
-        return self._request('chat.postMessage',
-                             raise_on_error=True,
-                             **args)['ts']
-
-    def upload_file(self, path, channel, thread=None):
-
-        args = {'channels': channel}
-        if thread:
-            args['thread_ts'] = thread
-
-        args['file'] = open(path, 'rb')
-        resp = self._request('files.upload', raise_on_error=True, **args)
-
-    def rtm_events(self):
-        if not self.rtm_connected:
-            if self.sc.rtm_connect(with_team_state=False,
-                                   auto_reconnect=True):
-                self.rtm_connected = True
-            else:
-                raise MFBException("RTM connect failed")
-        t = time.time()
-        d = t - self._last_rtm_events
-        if d < MIN_RTM_EVENTS_INTERVAL:
-            time.sleep(MIN_RTM_EVENTS_INTERVAL - d)
-        self._last_rtm_events = t
-        return self.sc.rtm_read()
-
-    def im_channel(self, user):
-        try:
-            return self._request('im.open',
-                                 user=user,
-                                 raise_on_error=True)['channel']['id']
-        except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'user_not_found':
-                raise MFBUserNotFound(user)
-            else:
-                raise
-
-    def user_by_email(self, email):
-        try:
-            return self._request('users.lookupByEmail',
-                                 email=email,
-                                 raise_on_error=True)['user']['id']
-        except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'users_not_found':
-                raise MFBUserNotFound(email)
-            else:
-                raise
-
-    def user_info(self, user):
-        try:
-            return self._request('users.info',
-                                 user=user,
-                                 raise_on_error=True)['user']
-        except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'user_not_found':
-                raise MFBUserNotFound(user)
-            else:
-                raise
-
-    def channel_info(self, channel):
-        try:
-            return self._request('channels.info',
-                                 channel=channel,
-                                 raise_on_error=True)['channel']
-        except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'channel_not_found':
-                raise MFBChannelNotFound(channel)
-            else:
-                raise
-
-    def direct_channels(self):
-        return self._page_iter('im.list', 'ims', sort_key=None)
-
-    def past_events(self, channel, **opts):
-        events = self._page_iter('conversations.history',
-                                 'messages',
-                                 channel=channel)
+        # API : conversations.history
+        # SCOPE : channels:history
+        # SCOPE : groups:history
+        # SCOPE : im:history
+        # SCOPE : mpim:history
+        events = self._page_iter(self.sc.conversations_history,'messages',channel=channel)
         return self._format_history(events, **opts)
 
+    
+
     def past_replies(self, channel, thread, **opts):
-        events = self._page_iter('conversations.replies',
+        # API: conversations.replies
+        # SCOPE : channels:history
+        # SCOPE : groups:history
+        # SCOPE : im:history
+        # SCOPE : mpim:history
+        events = self._page_iter(self.sc.conversations_replies,
                                  'messages',
                                  channel=channel,
                                  ts=thread)
@@ -408,12 +321,11 @@ class MFBSlackClient(object):
                 if 'reply_count' not in event)
 
     def download_file(self, file_permalink):
+        # API : files.info
         m = PERMALINK_FILE_ID.match(file_permalink)
         if m:
             try:
-                info = self._request('files.info',
-                                     file=m.group(1),
-                                     raise_on_error=True)['file']
+                info = self.sc.files_info(file=m.group(1))['file']
             except MFBRequestFailed:
                 raise MFBInvalidPermalink(file_permalink)
             else:
@@ -429,9 +341,10 @@ class MFBSlackClient(object):
         return events
 
     def _page_iter(self, method, it_field, **args):
+        # Iteartor for getting paginated data 
         args['limit'] = 200
         while True:
-            resp = self._request(method, **args)
+            resp = method(**args)
             for item in resp[it_field]:
                 yield item
             cursor = None
@@ -459,26 +372,3 @@ class MFBSlackClient(object):
                     break
             time.sleep(2**i)
         raise MFBClientException('download_file', {'url': url}, msg)
-
-    def _request(self, method, raise_on_error=False, **args):
-        for i in range(NUM_RETRIES + 1):
-            delay = 2**i
-            try:
-                resp = self.sc.api_call(method, **args)
-                if resp['ok']:
-                    return resp
-                elif 'Retry-After' in resp['headers']:
-                    delay = int(response['headers']['Retry-After'])
-                elif raise_on_error:
-                    raise MFBRequestFailed(method, args, resp)
-                else:
-                    return resp
-            except MFBRequestFailed:
-                raise
-            except:
-                if i == NUM_RETRIES:
-                    raise
-            finally:
-                time.sleep(delay)
-        else:
-            raise MFBRateLimitException(method, args)

@@ -8,7 +8,7 @@ from itertools import chain
 from collections import defaultdict, namedtuple
 
 from .state import MFBState
-from .slack_client import MFBSlackClient
+from .slack_client import MFBSlackClientV2
 from .exceptions import MFBException
 from .process_monitor import process_fingerprint_matches
 
@@ -46,7 +46,7 @@ class FormatFriendlyDict(object):
 
 class MFBServer(object):
 
-    def __init__(self, slack_client:MFBSlackClient, admin_email, rules, logger, action_user):
+    def __init__(self, slack_client:MFBSlackClientV2, admin_email, rules, logger, action_user):
         self.sc = slack_client
         self.state = MFBState()
         self.dm_token = '<@%s>' % self.sc.bot_user_id()
@@ -221,9 +221,9 @@ class MFBServer(object):
     def _apply_rule(self, event):
         if event.type != 'state_change':
             if event.chan and event.chan_name is None and not event.is_im:
-                self._take_action(event, op='channel_info', channel=event.chan)
+                self._take_action(event, op='channel-info', channel=event.chan)
             if event.user and event.user_name is None:
-                self._take_action(event, op='user_info', user=event.user)
+                self._take_action(event, op='user-info', user=event.user)
         match = self.rules.match(event, self.state)
         if match:
             rule_name, action, msg_groups, context_update = match

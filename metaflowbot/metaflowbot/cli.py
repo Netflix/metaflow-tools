@@ -4,7 +4,7 @@ from datetime import datetime
 
 import click
 
-from .slack_client import MFBSlackClient
+from .slack_client import MFBSlackClient,MFBSlackClientV2
 from .exceptions import MFBException
 from .server import MFBServer
 from .rules import MFBRules
@@ -32,7 +32,6 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
               is_flag=True,
               default=False,
               help="Debug mode: Print to stdout instead of sending to Slack")
-# TODO : Remove --slack-token from CLI Options 
 @click.option('--slack-token',
               help="Token for the Slack API.")
 @click.option('--admin-thread',
@@ -46,7 +45,7 @@ def cli(obj,
         admin_thread=None,
         reply_thread=None):
     # TODO : Remove slack_token
-    obj.sc = MFBSlackClient(slack_token)
+    obj.sc = MFBSlackClientV2(slack_token)
     if debug:
         obj.publish_state = lambda msg: logger(msg, head='[debug state] ')
         obj.reply = lambda msg: logger(msg, head='[debug reply] ')
