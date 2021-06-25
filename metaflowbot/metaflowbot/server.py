@@ -259,10 +259,6 @@ class MFBServer(object):
         # action user has permissions to use it
         env['METAFLOW_CLIENT_CACHE_PATH'] = 'metaflow_client_cache'
 
-        # ! Adding AWS related environment variable. 
-        # ! How do i handle this better ? 
-        env.update({k:os.environ[k] for k in os.environ if 'AWS' in k})
-
         if 'PATH' in os.environ:
             # sys.executable does not work in subprocesses
             # if PATH is not set
@@ -271,6 +267,8 @@ class MFBServer(object):
         if 'PYTHONPATH' in os.environ:
             env['PYTHONPATH'] = os.environ['PYTHONPATH']
 
+        # Use the Parent server thread's environment variables. 
+        env.update({k:os.environ[k] for k in os.environ if k not in env})        
         cmd = []
         cmd += [sys.executable,
                 '-m',
