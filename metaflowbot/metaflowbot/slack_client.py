@@ -67,6 +67,10 @@ class MFBRateLimitException(MFBClientException):
     pass
 
 class SlackMessageQueue(Queue):
+    """SlackMessageQueue 
+    Message Queue to hold all Slack messages from `SlackSocketSubscriber`.
+    TODO: Stress Test the queue. 
+    """
     def __init__(self, maxsize: int = 0) -> None:
         super().__init__(maxsize=maxsize)
 
@@ -81,6 +85,7 @@ class SlackMessageQueue(Queue):
 
     def flush(self)-> List[dict]:
         """flush 
+        TODO : Evaluate this abstraction better. 
         Take all messages from the Queue and return to the caller. 
         Essentially Empty Everything. 
         https://stackoverflow.com/questions/8196254/how-to-iterate-queue-queue-items-in-python
@@ -96,21 +101,14 @@ class SlackMessageQueue(Queue):
 def process(queue:SlackMessageQueue,user_id:str,client: SocketModeClient, req: SocketModeRequest):
     """
     Some things To Think upon. 
-    1. the bot is going to start threads when there is an '@' mention;
-        - What happens when someone does a '@' mention in the thread : 
-            - If the message is coming from inside the thread then don't instantiate new thread. 
-                - **How Do I know a message is coming from within a thread ??????**
-            - If the '@' mention is coming from a channel level, then start a thread. 
-    2. This will only subscribe to `message.channels` events. 
-    3. Message body can be found here : https://api.slack.com/events/message.channels
+    Message body can be found here : https://api.slack.com/events/message.channels
     """
     if req.type == "events_api":
         # Acknowledge the request anyway
         # ! acknowledgement is needed to ensure messages are not Double sent
         response = SocketModeResponse(envelope_id=req.envelope_id)
         client.send_socket_mode_response(response)
-
-    # TODO : Check if this working properly. 
+    
     queue.injest([req.payload['event']])
 
 class SlackSocketSubscriber(Thread):
@@ -120,7 +118,7 @@ class SlackSocketSubscriber(Thread):
 
     This is a daemon thread because it should die when the program shuts and we don't care much about it once it starts
 
-    TODO : Ensure this thread runs without any kind of failure. 
+    TODO : Ensure this thread runs without any kind of failure. Stress test the thread. 
     """
     def __init__(self,slack_token,message_queue:Queue) -> None:
         super().__init__(daemon=True)
@@ -196,7 +194,6 @@ class MFBSlackClientV2(object):
         return self.sc.auth_test()['user_id']
 
     def post_message(self, msg, channel, thread=None, attachments=None):
-        # TODO : This function is wrapper to throw a message into a channel. 
         # This function is important because the CLI wrapper with click and the 
         # MFBServer will use this to put messages in admin thread and actual user threads. 
         args = {'channel': channel}

@@ -112,12 +112,11 @@ class MFBServer(object):
             # TODO in PID check, check disk space, alert if > k% used
             for event in chain(self._lost_process_events(),
                                self._make_events(self.sc.rtm_events())):
-
                 self._log_event(event)
                 if event.type == 'state_change':
                     self._update_state(event)
                 self._apply_rule(event)
-                time.sleep(1)
+            time.sleep(1)
 
     def _lost_process_events(self):
         """_lost_process_events [summary]
@@ -148,12 +147,15 @@ class MFBServer(object):
         self._lost_processes = lost
 
     def _make_events(self, event_iter, admin_thread=None):
+        """_make_events [summary]
+        Makes custom Event object from event's coming from 
+        slack socket subscriber. 
+        """
         if admin_thread is None:
             admin_thread = self.admin_thread
         for ev in event_iter:
             try:
-                subtype = ev.get('subtype')
-                if ev['type'] == 'message' and subtype in (None, 'bot_message'):
+                if ev['type'] == 'message':
                     thread_ts = ev.get('thread_ts')
                     chan = ev.get('channel')
                     msg = ev.get('text', '')
@@ -174,8 +176,9 @@ class MFBServer(object):
                     if thread_ts == admin_thread and\
                        self.state.is_state_message(msg):
                         mfb_type = 'state_change'
-
-                    elif subtype != 'bot_message':
+                    
+                    # To identify messsagae by bots we can now just check for bot_id
+                    elif 'bot_id' not in ev: 
                         # Type 2: User messages in an existing thread. We
                         # ignore MFB's replies in existing threads.
                         if self.state.is_known_thread(chan, thread_ts):
@@ -189,7 +192,6 @@ class MFBServer(object):
                                 # this is not an existing thread, so the thread_ts
                                 # is the parent event ts.
                                 thread_ts = ts
-
                     if mfb_type:
                         yield Event(type=mfb_type,
                                     msg=msg,

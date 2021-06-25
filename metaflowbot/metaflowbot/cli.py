@@ -4,7 +4,7 @@ from datetime import datetime
 
 import click
 
-from .slack_client import MFBSlackClient,MFBSlackClientV2
+from .slack_client import MFBSlackClientV2
 from .exceptions import MFBException
 from .server import MFBServer
 from .rules import MFBRules
@@ -26,7 +26,6 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
                 bold=system_msg,
                 fg=LOGGER_BAD_COLOR if bad else None)
 
-# TODO : Change the layer'd CLI here with the modified Slack client.
 @click.group()
 @click.option('--debug',
               is_flag=True,
@@ -44,7 +43,6 @@ def cli(obj,
         slack_token=None,
         admin_thread=None,
         reply_thread=None):
-    # TODO : Remove slack_token
     obj.sc = MFBSlackClientV2(slack_token)
     if debug:
         obj.publish_state = lambda msg: logger(msg, head='[debug state] ')
