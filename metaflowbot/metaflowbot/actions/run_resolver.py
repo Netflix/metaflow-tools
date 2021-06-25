@@ -44,10 +44,17 @@ STYLES = [# [Run/ID]
 
 PARSER = [re.compile(x, re.IGNORECASE) for x in STYLES]
 
+DATEPARSER = lambda date,format="%Y-%m-%dT%H:%M:%SZ": datetime.strptime(date,format)
+
 ResolvedRun = namedtuple('ResolvedRun',
                          ['id',
+                          'flow',
                           'who',
                           'when',
+                          'finished',
+                          'successful',
+                          'errored',
+                          'running',
                           'code_package'])
 
 class RunResolver(object):
@@ -79,7 +86,7 @@ class RunResolver(object):
                 example = run.id
             msg.append(" - {x}`{run.id}`{x} _by {run.who}, {when}_ {reason}"\
                        .format(run=run,
-                               when=timeago.format(run.when,
+                               when=timeago.format(DATEPARSER(run.when),
                                                    now=datetime.utcnow()),
                                x='~' if exclude else '',
                                reason='(%s)' % exclude if exclude else ''))
@@ -98,9 +105,15 @@ class RunResolver(object):
                 code = run['start'].task.metadata_dict.get('code-package-url')
             else:
                 code = None
-            return ResolvedRun(id='/'.join(run.pathspec.split('/')[1:]),
+            flow_running = run.finished_at is None
+            return ResolvedRun(id=run.pathspec,
                                who=find_user(run),
+                               flow= run.pathspec.split('/')[0],
                                when=run.created_at,
+                                finished = run.finished,
+                                successful = run.successful,
+                                errored= not flow_running and not run.successful,
+                                running = flow_running,
                                code_package=code)
 
         try:

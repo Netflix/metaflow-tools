@@ -9,7 +9,7 @@ from metaflow import Run, namespace
 from metaflow.exception import MetaflowNotFound
 from metaflow.datastore.util.s3util import get_s3_client
 
-from .run_resolver import RunResolver, RunResolverException, find_user
+from .run_resolver import RunResolver, RunResolverException, find_user,DATEPARSER
 from ..cli import action
 from ..state import MFBState
 
@@ -34,7 +34,7 @@ def inspect_run(ctx, runspec=None, howto=False):
                 attrs = {'inspect.run_id': runs[0].id}
                 state = MFBState.message_set_attributes(obj.thread, attrs)
                 obj.publish_state(state)
-                obj.reply("Ok, inspecting *%s*." % runs[0].id)
+                obj.reply("Ok, inspecting *%s*." % (runs[0].id))
                 ctx.invoke(inspect, run_id=runs[0].id)
             else:
                 reply = resolver.format_runs(runs, lambda _: None)
@@ -106,7 +106,7 @@ def reply_inspect(obj, run_id):
     def run_status(run):
         if run.finished:
             if run.successful:
-                mins = (run.finished_at - run.created_at).total_seconds() / 60
+                mins = (DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)).total_seconds() / 60
                 return "It ran for %d minutes and finished successfully." % mins
             else:
                 return "It did not finish successfully."
@@ -115,9 +115,9 @@ def reply_inspect(obj, run_id):
 
     def step_runtime(tasks):
         if tasks:
-            end = [t.finished_at for t in tasks]
+            end = [DATEPARSER(t.finished_at) for t in tasks]
             if all(end):
-                secs = (max(end) - tasks[-1].created_at).total_seconds()
+                secs = (max(end) - DATEPARSER(tasks[-1].created_at)).total_seconds()
                 if secs < 60:
                     return '%ds' % secs
                 else:
@@ -126,7 +126,7 @@ def reply_inspect(obj, run_id):
 
     namespace(None)
     run = Run(run_id)
-    ago = timeago.format(run.created_at, now=datetime.utcnow())
+    ago = timeago.format(DATEPARSER(run.created_at), now=datetime.utcnow())
     head = ['Run *%s* was started %s by _%s_.' % (run_id, ago, find_user(run)),
             run_status(run),
             'Tags: %s' % ', '.join('`%s`' % tag for tag in run.tags),

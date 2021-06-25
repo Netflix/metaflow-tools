@@ -43,7 +43,7 @@ def parameters(obj,
                show=False,
                howto=False):
 
-    if howto:
+    if howto or code_run_id is None:
         obj.reply(howto_message())
     else:
         code = MFBCode(code_run_id)

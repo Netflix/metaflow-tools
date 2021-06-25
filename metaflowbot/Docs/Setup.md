@@ -26,11 +26,3 @@ The setup Has the following steps:
     ```sh
     python -m metaflowbot --slack-token $(echo $SLACK_BOT_TOKEN) server --admin me@server.com --new-admin-thread
     ```
-
-## TODOS
-
-1. Clean up Bot-Token and slack token passing to the bot server.
-2. Remove code relating to starting runs.
-3. Run more tests on the bot to test actual read functionality.
-4. Test flow executions with the bot.
-5. Setup profile based configuration change. 
