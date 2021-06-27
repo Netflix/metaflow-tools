@@ -52,6 +52,9 @@ def inspect_run(ctx, runspec=None, howto=False):
 @click.pass_obj
 def inspect_data(obj, run_id=None, step=None):
     try:
+        # This step is HUGEE!
+        # TODO : Change Response template here.
+        # Todo : find way to cleanly work around bottleneck induced by large artifacts. 
         reply_step_info(obj, run_id, step, data_info)
     except:
         traceback.print_exc()
@@ -67,6 +70,9 @@ def inspect_data(obj, run_id=None, step=None):
 @click.pass_obj
 def inspect_logs(obj, run_id=None, step=None):
     try:
+        # This step is HUGEE!
+        # TODO : Change Response template here.
+        # Todo : find way to cleanly work around bottleneck induced by large artifacts. 
         reply_step_info(obj, run_id, step, logs_info)
     except:
         traceback.print_exc()
@@ -205,7 +211,7 @@ def data_info(tasks):
     for task in reversed(tasks):
         fields = []
         for art in task:
-            size = artifact_size(art._object['s3_location'])
+            size = artifact_size(art._object['location'])
             if size is None or size > MAX_ARTIFACT_SIZE:
                 value = '[value too big]'
             else:

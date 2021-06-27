@@ -222,6 +222,8 @@ class MFBServer(object):
 
     def _apply_rule(self, event):
         if event.type != 'state_change':
+            # TODO : figure why this line is used ? 
+            # todo : figure Why is channel-info/user-info being called via the CLI ?s
             if event.chan and event.chan_name is None and not event.is_im:
                 self._take_action(event, op='channel-info', channel=event.chan)
             if event.user and event.user_name is None:

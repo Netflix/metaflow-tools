@@ -8,6 +8,7 @@ class MFBRules(object):
 
     def __init__(self, path):
         with open(path) as f:
+            # ! TODO : FIX THIS 
             try:
                 self.rules = yaml.load(f)
             except Exception as ex:
