@@ -1,3 +1,26 @@
+resource "aws_security_group" "sagemaker" {
+  name        = "${local.resource_prefix}-sagemaker-security-group-${local.resource_suffix}"
+  description = "Sagemaker notebook security group"
+  vpc_id      = data.terraform_remote_state.infra.outputs.vpc_id
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # egress to anywhere
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = local.standard_tags
+}
+
 resource "aws_sagemaker_notebook_instance_lifecycle_configuration" "this" {
   name = "${local.resource_prefix}-nb-instance-lc-conf-${local.resource_suffix}"
 
@@ -35,9 +58,7 @@ resource "aws_sagemaker_notebook_instance" "this" {
 
   lifecycle_config_name = aws_sagemaker_notebook_instance_lifecycle_configuration.this.name
 
-  direct_internet_access = "Disabled"
-
-  subnet_id = data.terraform_remote_state.infra.outputs.subnet_private_1_id
+  subnet_id = data.terraform_remote_state.infra.outputs.subnet1_id
 
   security_groups = [
     aws_security_group.sagemaker.id

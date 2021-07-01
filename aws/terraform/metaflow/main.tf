@@ -2,16 +2,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-data "terraform_remote_state" "infra" {
-  backend = "local"
-
-  config = {
-    path = "../infra/terraform.tfstate"
-  }
-}
-
-data "aws_region" "current" {}
-
 module "common_vars" {
   source = "../modules/common"
 
@@ -25,27 +15,22 @@ module "metaflow" {
   resource_prefix = local.resource_prefix
   resource_suffix = local.resource_suffix
 
+  access_list_cidr_blocks                = var.access_list_cidr_blocks
+  api_basic_auth                         = var.api_basic_auth
+  batch_type                             = var.batch_type
+  compute_environment_desired_vcpus      = var.compute_environment_desired_vcpus
+  compute_environment_instance_types     = var.compute_environment_instance_types
+  compute_environment_max_vcpus          = var.compute_environment_max_vcpus
+  compute_environment_min_vcpus          = var.compute_environment_min_vcpus
   enable_custom_batch_container_registry = var.enable_custom_batch_container_registry
   enable_step_functions                  = var.enable_step_functions
+  iam_partition                          = var.iam_partition
+  subnet1_id                             = data.terraform_remote_state.infra.outputs.subnet1_id
+  subnet2_id                             = data.terraform_remote_state.infra.outputs.subnet2_id
+  vpc_cidr_block                         = data.terraform_remote_state.infra.outputs.vpc_cidr_block
+  vpc_id                                 = data.terraform_remote_state.infra.outputs.vpc_id
 
-  metaflow_policy_arn = data.terraform_remote_state.infra.outputs.metaflow_policy_arn
-  tags                = module.common_vars.tags
-
-  cpu_max_compute_vcpus           = var.cpu_max_compute_vcpus
-  cpu_desired_compute_vcpus       = var.cpu_desired_compute_vcpus
-  cpu_min_compute_vcpus           = var.cpu_min_compute_vcpus
-  large_cpu_max_compute_vcpus     = var.large_cpu_max_compute_vcpus
-  large_cpu_desired_compute_vcpus = var.large_cpu_desired_compute_vcpus
-  large_cpu_min_compute_vcpus     = var.large_cpu_min_compute_vcpus
-  gpu_max_compute_vcpus           = var.gpu_max_compute_vcpus
-  gpu_desired_compute_vcpus       = var.gpu_desired_compute_vcpus
-  gpu_min_compute_vcpus           = var.gpu_min_compute_vcpus
-
-  access_list_cidr_blocks = var.access_list_cidr_blocks
-  vpc_id                  = data.terraform_remote_state.infra.outputs.vpc_id
-  vpc_cidr_block          = data.terraform_remote_state.infra.outputs.vpc_cidr_block
-  subnet_private_1_id     = data.terraform_remote_state.infra.outputs.subnet_private_1_id
-  subnet_private_2_id     = data.terraform_remote_state.infra.outputs.subnet_private_2_id
+  tags = module.common_vars.tags
 }
 
 resource "local_file" "metaflow_config" {

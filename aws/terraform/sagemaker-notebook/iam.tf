@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "sagemaker_execution_role" {
+data "aws_iam_policy_document" "sagemaker_execution_role_assume_role" {
   statement {
     effect = "Allow"
 
@@ -19,7 +19,7 @@ resource "aws_iam_role" "sagemaker_execution_role" {
   name        = local.sagemaker_execution_role_name
   description = "The role that our SageMaker instances uses"
 
-  assume_role_policy = data.aws_iam_policy_document.sagemaker_execution_role.json
+  assume_role_policy = data.aws_iam_policy_document.sagemaker_execution_role_assume_role.json
 
   tags = local.standard_tags
 }
@@ -77,12 +77,46 @@ data "aws_iam_policy_document" "logs_roles_policy" {
     ]
 
     resources = [
+      "arn:${var.iam_partition}:logs:${local.aws_region}:${local.aws_account_id}:log-group:/aws/batch/job:log-stream:*",
+      "arn:${var.iam_partition}:logs:${local.aws_region}:${local.aws_account_id}:log-group:/aws/sagemaker/NotebookInstances:log-stream:*",
+    ]
+  }
+
+  statement {
+    sid = "LogEvents"
+
+    effect = "Allow"
+
+    actions = [
+      "logs:PutLogEvents",
+      "logs:GetLogEvents",
+    ]
+
+    resources = [
+      "${aws_sagemaker_notebook_instance.this.arn}/jupyter.log",
+      "${aws_sagemaker_notebook_instance.this.arn}/LifecycleConfigOnCreate",
+      "arn:${var.iam_partition}:logs:${local.aws_region}:${local.aws_account_id}:log-group:/aws/batch/job:log-stream:job-queue-",
+    ]
+  }
+
+  statement {
+    sid = "LogGroup"
+
+    effect = "Allow"
+
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+      "logs:CreateLogGroup",
+    ]
+
+    resources = [
       "*"
     ]
   }
 }
 
-data aws_iam_policy_document "sagemaker_permissions" {
+data "aws_iam_policy_document" "sagemaker_permissions" {
   statement {
     sid = "SageMakerNotebook"
 
@@ -97,12 +131,13 @@ data aws_iam_policy_document "sagemaker_permissions" {
     ]
 
     resources = [
-      aws_sagemaker_notebook_instance.this.arn
+      aws_sagemaker_notebook_instance.this.arn,
+      "arn:${var.iam_partition}:logs:${local.aws_region}:${local.aws_account_id}:notebook-instance-lifecycle-config/basic*",
     ]
   }
 }
 
-data aws_iam_policy_document "custom_s3_list_access" {
+data "aws_iam_policy_document" "custom_s3_list_access" {
   statement {
     sid = "BucketAccess"
 
@@ -136,7 +171,7 @@ data "aws_iam_policy_document" "custom_s3_access" {
   }
 }
 
-data aws_iam_policy_document "deny_presigned" {
+data "aws_iam_policy_document" "deny_presigned" {
   statement {
     sid = "DenyPresigned"
 
@@ -157,6 +192,21 @@ data aws_iam_policy_document "deny_presigned" {
       ]
       variable = "s3:authType"
     }
+  }
+}
+
+data "aws_iam_policy_document" "s3_kms" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:Encrypt",
+    ]
+
+    resources = [
+      data.terraform_remote_state.metaflow.outputs.datastore_s3_bucket_kms_key_arn
+    ]
   }
 }
 
@@ -202,17 +252,8 @@ resource "aws_iam_role_policy" "grant_deny_presigned" {
   policy = data.aws_iam_policy_document.deny_presigned.json
 }
 
-resource "aws_iam_role_policy_attachment" "grant_access_metaflow_s3_bucket" {
-  role       = aws_iam_role.sagemaker_execution_role.name
-  policy_arn = data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_policy
-}
-
-resource "aws_iam_role_policy_attachment" "grant_access_metaflow_s3_bucket_kms_key" {
-  role       = aws_iam_role.sagemaker_execution_role.name
-  policy_arn = data.terraform_remote_state.metaflow.outputs.metaflow_s3_bucket_kms_key_policy
-}
-
-resource "aws_iam_role_policy_attachment" "grant_access_metaflow_policy" {
-  role       = aws_iam_role.sagemaker_execution_role.name
-  policy_arn = data.terraform_remote_state.infra.outputs.metaflow_policy_arn
+resource "aws_iam_role_policy" "grant_s3_kms" {
+  name   = "s3_kms"
+  role   = aws_iam_role.sagemaker_execution_role.name
+  policy = data.aws_iam_policy_document.s3_kms.json
 }

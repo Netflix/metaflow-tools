@@ -1,17 +1,60 @@
+variable "access_list_cidr_blocks" {
+  type        = list(string)
+  description = "List of CIDRs we want to grant access to our Metaflow Metadata Service. Usually this is your VPN's CIDR blocks."
+  default     = []
+}
+
+variable "api_basic_auth" {
+  type        = bool
+  default     = true
+  description = "Enable basic auth for API Gateway? (requires key export)"
+}
+
 variable "app" {
   default     = "metaflow"
   description = "Name of the application"
 }
 
-variable "env" {
-  type        = string
-  default     = "dev"
-  description = "The environment for this stack to be created in. Used for the tfstate bucket and naming scope of resources."
-}
-
 variable "aws_region" {
   type        = string
+  default     = "us-west-2"
   description = "AWS region we will deploy to."
+}
+
+variable "batch_type" {
+  type        = string
+  description = "AWS Batch Compute Type ('ec2', 'fargate')"
+  default     = "ec2"
+}
+
+variable "compute_environment_desired_vcpus" {
+  type        = number
+  description = "Desired Starting VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)"
+  default     = 8
+}
+
+variable "compute_environment_instance_types" {
+  type        = list(string)
+  description = "The instance types for the compute environment"
+  default     = ["c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge"]
+}
+
+variable "compute_environment_max_vcpus" {
+  type        = number
+  description = "Maximum VCPUs for Batch Compute Environment [16-96]"
+  default     = 64
+}
+
+variable "compute_environment_min_vcpus" {
+  type        = number
+  description = "Minimum VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)"
+  default     = 8
+}
+
+variable "custom_role" {
+  type        = bool
+  default     = false
+  description = "Enable custom role with restricted permissions?"
 }
 
 variable "enable_custom_batch_container_registry" {
@@ -22,65 +65,18 @@ variable "enable_custom_batch_container_registry" {
 
 variable "enable_step_functions" {
   type        = bool
+  default     = true
   description = "Provisions infrastructure for step functions if enabled"
 }
 
-variable "access_list_cidr_blocks" {
-  type        = list(string)
-  description = "List of CIDRs we want to grant access to our Metaflow Metadata Service. Usually this is your VPN's CIDR blocks."
-  default     = []
+variable "env" {
+  type        = string
+  default     = "dev"
+  description = "The environment for this stack to be created in. Used for the tfstate bucket and naming scope of resources."
 }
 
-variable "cpu_max_compute_vcpus" {
+variable "iam_partition" {
   type        = string
-  description = "Maximum number of Amazon EC2 vCPUs that our CPU Batch Compute Environment can reach."
-  default     = 64
-}
-
-variable "cpu_min_compute_vcpus" {
-  type        = string
-  description = "Minimum number of Amazon EC2 vCPUs that our CPU Batch Compute Environment should maintain."
-  default     = 16
-}
-
-variable "cpu_desired_compute_vcpus" {
-  type        = string
-  description = "Desired number of Amazon EC2 vCPUS in our CPU Batch Compute Environment. A non-zero number will ensure instances are always on and avoid some cold-start problems."
-  default     = 16
-}
-
-variable "large_cpu_max_compute_vcpus" {
-  type        = string
-  description = "Maximum number of Amazon EC2 vCPUs that our large CPU Batch Compute Environment can reach."
-  default     = 128
-}
-
-variable "large_cpu_min_compute_vcpus" {
-  type        = string
-  description = "Minimum number of Amazon EC2 vCPUs that our large CPU Batch Compute Environment should maintain."
-  default     = 0
-}
-
-variable "large_cpu_desired_compute_vcpus" {
-  type        = string
-  description = "Desired number of Amazon EC2 vCPUS in our large CPU Batch Compute Environment. A non-zero number will ensure instances are always on and avoid some cold-start problems."
-  default     = 0
-}
-
-variable "gpu_max_compute_vcpus" {
-  type        = string
-  description = "Maximum number of Amazon EC2 vCPUs that our GPU Batch Compute Environment can reach."
-  default     = 64
-}
-
-variable "gpu_min_compute_vcpus" {
-  type        = string
-  description = "Minimum number of Amazon EC2 vCPUs that our GPU Batch Compute Environment should maintain."
-  default     = 0
-}
-
-variable "gpu_desired_compute_vcpus" {
-  type        = string
-  description = "Desired number of Amazon EC2 vCPUS in our GPU Batch Compute Environment. A non-zero number will ensure instances are always on and avoid some cold-start problems."
-  default     = 0
+  default     = "aws"
+  description = "IAM Partition (Select aws-us-gov for AWS GovCloud, otherwise leave as is)"
 }
