@@ -42,12 +42,12 @@ The metaflow sub-project provisions the metadata API, AWS Step Functions, and an
 
 Copy `example.tfvars` to `prod.tfvars` (or whatever environment name you prefer) and update that `env` name and the `region` as needed. These variables are used to construct unique names for infrastructure resources.
 
-Metadata API authentication: the endpoint is exposed to the public internet via Amazon API Gateway, but only accessible to the IPs that match `access_list_cidr_blocks` (default is none).
+Protecting the Metadata API:
+By default, the Metadata API has basic authentication enabled (recommended), but it is exposed to the public internet via Amazon API Gateway. To further restrict access to the API, the `access_list_cidr_blocks` can be set to specify IPs or network cidr blocks that are allowed to access the endpoint, blocking all other access.
 
 Additionally:
-* There are variables which govern the three compute environments associated with the AWS Batch queue that can be adjusted based on needs. 
+* There are variables which govern the compute environment associated with the AWS Batch queue that can be adjusted based on needs.
 * The `enable_step_functions` flag can be set to false to not provision the AWS Step Functions infrastructure.
-* The `access_list_cidr_blocks` should be set to the network cidr blocks that will be accessing the metadata API. If you only need access from your local machine, determine your public IP address (`curl https://ifconfig.me/`) and add that value to the list.
 
 Initialize the terraform:
 

@@ -6,18 +6,6 @@ Mostly stands up and configures the Amazon VPC.
 
 ## AWS Resources
 
-### Amazon IAM
-
-Amazon IAM policy to allow access to the secret.
-
-### AWS KMS
-
-KMS Key to encrypt/decrypt AWS Secrets Manager Secret.
-
-### AWS Secrets Manager
-
-AWS Secrets Manager secret for storing secrets used in flows.
-
 ### Amazon VPC
 
 Amazon Virtual Private Cloud with two private subnets in different availability zones and a public subnet. Also includes an 
