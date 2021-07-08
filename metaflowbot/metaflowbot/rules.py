@@ -4,7 +4,22 @@ import yaml
 
 from .exceptions import MFBRulesParseException
 
+
 class MFBRules(object):
+    """MFBRules
+    Object that runs the rule framework on the Bot.
+
+    Currently Handled Events :
+        - never match
+        - new_thread
+            - Publishes state
+        - lost_process
+        - user_message
+            - Some messsage Publishes state
+        - slash_message
+
+    Spurious events
+    """
 
     def __init__(self, path):
         with open(path) as f:
@@ -28,8 +43,12 @@ class MFBRules(object):
     def match(self, event, state):
         for rule in self.rules:
             event_type = rule.get('event_type')
+            # If event type of rule and event type of message don't match continue
             if event_type and event_type != event.type:
                 continue
+
+            ############################################################
+            # Todo : Verify Why there lines are there when there is no is_mention,`is_im`,`is_direct` in Rules.
             is_mention = rule.get('is_mention')
             if is_mention is not None and is_mention != event.is_mention:
                 continue
@@ -39,12 +58,16 @@ class MFBRules(object):
             is_direct = rule.get('is_direct')
             if is_direct is not None and is_direct != event.is_direct:
                 continue
+            ###################################################################
+
             message = rule.get('message')
             re_match = None
             if message:
                 re_match = message.match(event.msg.strip())
+                # if Message didn't match the rule theen continue
                 if not re_match:
                     continue
+
             if event.type == 'state_change' and\
                not state.is_event_match(event, rule.get('state_change', {})):
                 continue
@@ -54,4 +77,5 @@ class MFBRules(object):
             return rule['name'],\
                    rule['action'],\
                    re_match.groups() if re_match else [],\
-                   rule.get('ephemeral_context_update')
+                   rule.get('ephemeral_context_update'),\
+                   event_type=='slash_message'

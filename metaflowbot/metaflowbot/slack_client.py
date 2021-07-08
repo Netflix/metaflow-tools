@@ -1,23 +1,21 @@
+import json
+import os
 import re
 import time
-import json
-from typing import List, Optional, Union
 import urllib
+from functools import partial
 from itertools import islice
+from queue import Empty, Queue
+from threading import Event, Thread
+from typing import List, Optional, Union
 
 import requests
-from functools import partial
-import os 
 from slack_sdk import WebClient
 from slack_sdk.socket_mode import SocketModeClient
-from slack_sdk.socket_mode.response import SocketModeResponse
 from slack_sdk.socket_mode.request import SocketModeRequest
+from slack_sdk.socket_mode.response import SocketModeResponse
+
 from .exceptions import MFBException
-
-from threading import Thread
-from queue import Empty, Queue
-
-from threading import Event
 
 NUM_RETRIES = 3
 MIN_RTM_EVENTS_INTERVAL = 1
@@ -59,35 +57,31 @@ class MFBClientException(MFBException):
 
 class MFBRequestFailed(MFBClientException):
     pass
-
-class MFBRateLimitException(MFBClientException):
-    pass
-
 class MFBRateLimitException(MFBClientException):
     pass
 
 class SlackMessageQueue(Queue):
-    """SlackMessageQueue 
+    """SlackMessageQueue
     Message Queue to hold all Slack messages from `SlackSocketSubscriber`.
-    TODO: Stress Test the queue. 
+    TODO: Stress Test the queue.
     """
     def __init__(self, maxsize: int = 0) -> None:
         super().__init__(maxsize=maxsize)
 
     def injest(self,messages:List[dict]) -> None:
-        """injest 
+        """injest
         Push Multiple messsage to Queue. \
-        Queue.put is by default Blocking to avoid Loosing messages and has Mutex's internally. 
+        Queue.put is by default Blocking to avoid Loosing messages and has Mutex's internally.
         """
         for m in messages:
             self.put(m)
-    
+
 
     def flush(self)-> List[dict]:
-        """flush 
-        TODO : Evaluate this abstraction better. 
-        Take all messages from the Queue and return to the caller. 
-        Essentially Empty Everything. 
+        """flush
+        TODO : Evaluate this abstraction better.
+        Take all messages from the Queue and return to the caller.
+        Essentially Empty Everything.
         https://stackoverflow.com/questions/8196254/how-to-iterate-queue-queue-items-in-python
         """
         try:
@@ -97,105 +91,118 @@ class SlackMessageQueue(Queue):
         except Empty:
             pass
         return queue_items
-    
-def process(queue:SlackMessageQueue,user_id:str,client: SocketModeClient, req: SocketModeRequest):
+
+def process(message_event_queue:SlackMessageQueue,\
+            slash_command_queue:SlackMessageQueue,\
+            client: SocketModeClient,\
+            req: SocketModeRequest):
     """
-    Some things To Think upon. 
+    Some things To Think upon.
     Message body can be found here : https://api.slack.com/events/message.channels
+    - @version commands.
+    - all possible ways to talk to bot
+    - Configuration to savin and team.
     """
     if req.type == "events_api":
         # Acknowledge the request anyway
         # ! acknowledgement is needed to ensure messages are not Double sent
         response = SocketModeResponse(envelope_id=req.envelope_id)
         client.send_socket_mode_response(response)
-    
-    queue.injest([req.payload['event']])
+        message_event_queue.injest([req.payload['event']])
+
+    elif req.type=='slash_commands':
+        # Response Structure Present Here : https://api.slack.com/apis/connections/socket-implement#command
+        response = SocketModeResponse(envelope_id=req.envelope_id,payload=f':mag_right: Executing Command.... Please Wait...')
+        client.send_socket_mode_response(response)
+        slash_command_queue.injest([req.payload])
 
 class SlackSocketSubscriber(Thread):
-    """SlackSocketSubscriber 
+    """SlackSocketSubscriber
     This will be a daemon thread that will connect to slack and subscribe to the message feed via the `SocketModeClient`
-    This will use a message queue to keep sending messages to the main thread. 
+    This will use a message queue to keep sending messages to the main thread.
 
     This is a daemon thread because it should die when the program shuts and we don't care much about it once it starts
 
-    TODO : Ensure this thread runs without any kind of failure. Stress test the thread. 
+    TODO : Ensure this thread runs without any kind of failure. Stress test the thread.
     """
-    def __init__(self,slack_token,message_queue:Queue) -> None:
+    def __init__(self,slack_token,message_event_queue:Queue,slash_command_queue:Queue) -> None:
         super().__init__(daemon=True)
-        self.publisher_queue = message_queue
-        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running. 
+        self.message_event_queue = message_event_queue
+        self.slash_command_queue = slash_command_queue
+        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running.
         self.slack_token = slack_token
-    
+
     def run(self) -> None:
-        """run 
+        """run
         wire up the socket feed and the function to filter flush items to queue
         """
         self.sc = SocketModeClient(
+            # TODO : Should it be this ?
             # This app-level token will be used only for establishing a connection
             app_token=os.environ.get("SLACK_APP_TOKEN"),  # xapp-A111-222-xyz
-            # ? : Do we need a WebClient here ?
-            web_client=WebClient(token=self.slack_token)  # xoxb-111-222-xyz
         )
-        # Add a new listener to receive messages from Slack
-        # You can add more listeners like this
-        user_id = self.sc.web_client.auth_test()['user_id']
-        # Bind the queue and user_id to ensure Message Paassig. 
-        subscriber_func = partial(process,self.publisher_queue,user_id)
+        # Adding two queues because I want to keep slash commands and other commands seperate
+        # Bind the queue to ensure Message Paassig.
+        subscriber_func = partial(process,self.message_event_queue,self.slash_command_queue)
         self.sc.socket_mode_request_listeners.append(subscriber_func)
         # Establish a WebSocket connection to the Socket Mode servers
         self.sc.connect()
         Event().wait()
 
-   
+
 def create_slack_subscriber(slack_token:str):
-    message_queue = SlackMessageQueue()
-    socket_thread = SlackSocketSubscriber(slack_token,message_queue) 
+    message_event_queue = SlackMessageQueue()
+    slash_command_queue = SlackMessageQueue()
+    socket_thread = SlackSocketSubscriber(slack_token,message_event_queue,slash_command_queue)
     socket_thread.start()
-    return message_queue,socket_thread
+    return message_event_queue,slash_command_queue,socket_thread
 
 
 class MFBSlackClientV2(object):
-    """MFBSlackClientV2 
+    """MFBSlackClientV2
     Replaces the `slack_client` with `slack_sdk`
         - Leverages the `WebClient` and the `SocketModeClient` (With RTM Message subscriber)
 
-    `slack_sdk` Socket Management: 
+    `slack_sdk` Socket Management:
     https://slack.dev/python-slack-sdk/socket-mode/index.html#socketmodeclient
 
-    `slack_sdk` WebClient : 
+    `slack_sdk` WebClient :
     https://slack.dev/python-slack-sdk/web/index.html
 
-    `SocketModeClient` leverages a Message queue which gets the RTM events. 
+    `SocketModeClient` leverages a Message queue which gets the RTM events.
 
     How to do threading via python API : https://slack.dev/python-slack-sdk/web/index.html
 
-    Deprecations : 
+    Deprecations :
         - `im.list` : https://api.slack.com/methods/im.list
             - Replacements : `conversations.list` , `users.conversations`
-    
+
     """
     def __init__(self,slack_token) -> None:
-        # plug in appropriate slack_sdk. Ensure `slack_token` is there. 
-        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running. 
+        # plug in appropriate slack_sdk. Ensure `slack_token` is there.
+        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running.
         self.sc = WebClient(token=slack_token)  # xoxb-111-222-xyz
         self.rtm_connected = False
         self._slack_token = slack_token
         self._last_rtm_events = 0
         self._rmt_feed_queue = None
+        self._slash_command_queue = None
         self._socket_tread = None
 
     @property
     def token(self):
         return self._slack_token
 
+    def bot_name(self):
+        return self.sc.auth_test()['user']
 
     def bot_user_id(self):
         # permission : auth.test
         return self.sc.auth_test()['user_id']
 
-    def post_message(self, msg, channel, thread=None, attachments=None):
-        # This function is important because the CLI wrapper with click and the 
-        # MFBServer will use this to put messages in admin thread and actual user threads. 
+    def post_message(self, msg, channel, thread=None, attachments=None,blocks=None):
+        # This function is important because the CLI wrapper with click and the
+        # MFBServer will use this to put messages in admin thread and actual user threads.
         args = {'channel': channel}
         if msg is not None:
             args['text'] = msg
@@ -203,10 +210,12 @@ class MFBSlackClientV2(object):
             args['attachments'] = json.dumps(attachments)
         if thread:
             args['thread_ts'] = thread
+        if blocks is not None:
+            args['blocks'] = blocks
         return self.sc.chat_postMessage(
             **args
         )['ts']
-         
+
 
     def upload_file(self, path, channel, thread=None):
         # permission : files.upload
@@ -217,28 +226,37 @@ class MFBSlackClientV2(object):
         args['file'] = open(path, 'rb')
         self.sc.files_upload(**args)
 
-    def rtm_events(self):
-        """rtm_events 
-        this method is only called by the server to get the get the realtime 
-        events from slack. 
-
-        Version 1 used SlackClient.rtm_read() to retrieve the messages from slack with a 
-        timeout. 
-
-        Verison 2 is using SocketMode and in that light is it better to create a thread 
-        along with a message queue to keep flushing information socket consumer and the 
-        main server thread. 
-        """
-        # Instantiate event reader over here. 
+    def _connect(self):
+        # Instantiate event reader over here.
         if not self.rtm_connected:
-            self._rmt_feed_queue,self._socket_tread = create_slack_subscriber(self.token)
+            self._rmt_feed_queue,self._slash_command_queue,self._socket_tread = create_slack_subscriber(self.token)
             self.rtm_connected = True
-        
+        return self.rtm_connected
+
+
+    def rtm_events(self):
+        """rtm_events
+        this method is only called by the server to get the get the realtime
+        events from slack.
+
+        Version 1 used SlackClient.rtm_read() to retrieve the messages from slack with a
+        timeout.
+
+        Verison 2 is using SocketMode and in that light is it better to create a thread
+        along with a message queue to keep flushing information socket consumer and the
+        main server thread.
+
+        This version also tries to connect to many
+        """
+        self._connect()
         return self._rmt_feed_queue.flush()
-        
+
+    def slash_command_events(self):
+        self._connect()
+        return self._slash_command_queue.flush()
 
     def im_channel(self, user):
-        # Older API : im.open --> Deprecated 
+        # Older API : im.open --> Deprecated
         # New API : conversations.open
         # SCOPE:  mpim:write
         # SCOPE:  im:write
@@ -273,7 +291,7 @@ class MFBSlackClientV2(object):
                 raise
 
     def channel_info(self, channel):
-        # permission : channels.info :: Deprecated 
+        # permission : channels.info :: Deprecated
         # conversations.info is the required permission
         try:
             return self.sc.conversations_info(channel=channel)['channel']
@@ -284,12 +302,12 @@ class MFBSlackClientV2(object):
                 raise
 
     def direct_channels(self):
-        """direct_channels 
-        This previously used `im.list` and `ims` as a method to get data. 
-        
+        """direct_channels
+        This previously used `im.list` and `ims` as a method to get data.
+
         In this version it will move to `users.conversations` or `conversations.list`
-        
-        TODO : Find out if method is needed or not. 
+
+        TODO : Find out if method is needed or not.
         """
         return self._page_iter(self.sc.conversations_list,'channels')
 
@@ -302,7 +320,7 @@ class MFBSlackClientV2(object):
         events = self._page_iter(self.sc.conversations_history,'messages',channel=channel)
         return self._format_history(events, **opts)
 
-    
+
 
     def past_replies(self, channel, thread, **opts):
         # API: conversations.replies
@@ -317,6 +335,7 @@ class MFBSlackClientV2(object):
         return (event for event in self._format_history(events, **opts)
                 if 'reply_count' not in event)
 
+    # Not Useful Right
     def download_file(self, file_permalink):
         # API : files.info
         m = PERMALINK_FILE_ID.match(file_permalink)
@@ -338,7 +357,7 @@ class MFBSlackClientV2(object):
         return events
 
     def _page_iter(self, method, it_field, **args):
-        # Iteartor for getting paginated data 
+        # Iteartor for getting paginated data
         args['limit'] = 200
         while True:
             resp = method(**args)

@@ -4,16 +4,18 @@ from urllib.parse import urlparse
 
 import click
 import timeago
+
 from ..cli import action
 from ..state import MFBState
 
 MAX_ARTIFACT_SIZE = 1000
-import requests
 import json
+
+import requests
 
 
 def random_joke():
-    ENDPOINT = r"https://official-joke-api.appspot.com/jokes/programming/random"    
+    ENDPOINT = r"https://official-joke-api.appspot.com/jokes/programming/random"
     data = requests.get(ENDPOINT)
     tt = json.loads(data.text)
     return tt
@@ -39,4 +41,3 @@ def joke(ctx):
             Sorry, I couldn't find a joke at the moment :meow_dead:
             '''
         )
-    

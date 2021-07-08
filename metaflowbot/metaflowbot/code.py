@@ -1,15 +1,14 @@
-import os
-import sys
-import json
 import inspect
-import tempfile
+import json
+import os
 import subprocess
+import sys
+import tempfile
 
-from metaflow import namespace, Run
+from metaflow import Run, namespace
 
-from .expiring_directory import ExpiringDirectory,\
-                                refresh_timestamp,\
-                                garbage_collect
+from .expiring_directory import (ExpiringDirectory, garbage_collect,
+                                 refresh_timestamp)
 
 HOUR = 60 * 60
 FLOW_APPLY_TIMEOUT = 2 * 60
@@ -39,9 +38,10 @@ class MFBCode(ExpiringDirectory):
 
         def get_flow():
 
-            import sys
-            import inspect
             import importlib
+            import inspect
+            import sys
+
             from metaflow import FlowSpec
 
             # We don't want to start executing the flow

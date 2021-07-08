@@ -1,10 +1,10 @@
 # TODO : Remove Module
 import click
 
-from .run_resolver import RunResolver, RunResolverException
 from ..cli import action
-from ..state import MFBState
 from ..code import MFBCode
+from ..state import MFBState
+from .run_resolver import RunResolver, RunResolverException
 
 COMMAND = 'use code from'
 
@@ -58,4 +58,3 @@ def howto_message(resolver):
 "Use `use code from` to specify what code to run. You need to "\
 "specify an existing run whose code can be cloned for a "\
 "new run. %s" % resolver.howto()
-

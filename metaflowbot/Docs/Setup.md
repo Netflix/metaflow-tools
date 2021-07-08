@@ -1,9 +1,9 @@
-# Metaflow Bot Setup 
+# Metaflow Bot Setup
 
-The setup follows two parts. 
+The setup follows two parts.
 1. The first part is setting up the bot on Slack to get access tokens.
 2. The second part is running the Bot server manually or via a docker image.
-## Slack Setup 
+## Slack Setup
 
 1. [Create an App on Slack UI](https://api.slack.com/apps) using provided [manifest](../manifest.yml).
 
@@ -12,13 +12,13 @@ The setup follows two parts.
 2. Install the App
     ![](images/app_install.png)
 
-3. Generate App token 
+3. Generate App token
     ![](images/app-token.png)
 
-4. Generate Bot token 
+4. Generate Bot token
     ![](images/bot-token.png)
 
-## Manual Running the Bot 
+## Manual Running the Bot
 
 1. Export the tokens as environment variables :
     ```sh
@@ -32,14 +32,14 @@ The setup follows two parts.
     python -m metaflowbot --slack-token $(echo $SLACK_BOT_TOKEN) server --admin me@server.com --new-admin-thread
     ```
 
-## Running Via Docker Image 
+## Running Via Docker Image
 
-1. Building Docker image 
+1. Building Docker image
 
-    ```sh 
+    ```sh
     docker build -t metaflowbot -f Dockerfile.metaflowbot .
     ```
-2. Running the Bot Container instance on local. 
+2. Running the Bot Container instance on local.
     ```sh
     docker run -i -t --rm \
         -e SLACK_BOT_TOKEN=$(echo $SLACK_BOT_TOKEN) \
@@ -48,6 +48,11 @@ The setup follows two parts.
         metaflowbot
     ```
 
-# Setup TODO: 
+## Before Commiting
+### Pre-commit
 
-1. Figure deployment stack of the bot and Where do configuration reside when deploying the bot ? 
+We leverage the [pre-commit](https://pre-commit.com/) framework.
+
+Install git hooks with `pre-commit install`.
+
+Run the checks `pre-commit run --all-files`.

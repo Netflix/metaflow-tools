@@ -1,0 +1,30 @@
+name: Deploy
+on:
+  push:
+    tags: releases/[1-9]+.[0-9]+.[0-9]+
+    branches: metaflowbot-v2
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
+        with:
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_app_name: "metaflow-bot" #Must be unique in Heroku
+          heroku_email: ${{secrets.ADMIN_USER_ADDRESS}}
+          checkstring: "ok"
+          usedocker: true
+          rollbackonhealthcheckfailed: false
+          docker_heroku_process_type: "worker"
+        env:
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_APP_TOKEN: ${{ secrets.SLACK_APP_TOKEN }}
+          METAFLOW_SERVICE_URL: ${{ secrets.METAFLOW_SERVICE_URL }}
+          ADMIN_USER_ADDRESS: ${{secrets.ADMIN_USER_ADDRESS}}
+          METAFLOW_DATASTORE_SYSROOT_S3: ${{secrets.METAFLOW_DATASTORE_SYSROOT_S3}}
+          METAFLOW_DATATOOLS_SYSROOT_S3: ${{secrets.METAFLOW_DATATOOLS_SYSROOT_S3}}
+          METAFLOW_DEFAULT_METADATA: "service"
+          METAFLOW_DEFAULT_DATASTORE: "s3"

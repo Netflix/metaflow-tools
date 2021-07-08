@@ -11,6 +11,11 @@ features:
   bot_user:
     display_name: flowey
     always_online: true
+  slash_commands:
+    - command: /flowey
+      description: "Calls Flowey "
+      usage_hint: /flowey [list-runs, subscribe, help]
+      should_escape: false
 oauth_config:
   scopes:
     bot:
@@ -32,6 +37,7 @@ oauth_config:
       - im:write
       - groups:write
       - channels:manage
+      - commands
 settings:
   event_subscriptions:
     bot_events:

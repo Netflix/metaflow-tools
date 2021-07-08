@@ -1,13 +1,13 @@
-import sys
 import os
+import sys
 from datetime import datetime
 
 import click
 
-from .slack_client import MFBSlackClientV2
 from .exceptions import MFBException
-from .server import MFBServer
 from .rules import MFBRules
+from .server import MFBServer
+from .slack_client import MFBSlackClientV2
 
 DEFAULT_RULES = os.path.join(os.path.dirname(__file__),
                              'metaflowbot_rules.yaml')
@@ -31,6 +31,10 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
               is_flag=True,
               default=False,
               help="Debug mode: Print to stdout instead of sending to Slack")
+@click.option('--slash-message',
+              is_flag=True,
+              default=False,
+              help="Slash message responses for actions (do not set manually)")
 @click.option('--slack-token',
               help="Token for the Slack API.")
 @click.option('--admin-thread',
@@ -40,6 +44,7 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
 @click.pass_obj
 def cli(obj,
         debug=False,
+        slash_message=False,
         slack_token=None,
         admin_thread=None,
         reply_thread=None):
@@ -53,16 +58,30 @@ def cli(obj,
         if admin_thread:
             obj.publish_state =\
                 lambda msg: obj.sc.post_message(msg, *admin_thread.split(':'))
-        if reply_thread:
+
+        # If slash message is passed the reply_thread will be the channnel id
+        # This is becaus slash_commands are ephemeral and cannot be threaded.
+        if slash_message:
+            channel = reply_thread
+            obj.upload =\
+                lambda path: obj.sc.upload_file(path, channel, thread=None)
+            obj.reply =\
+                lambda msg, attachments=None,blocks=None: obj.sc.post_message(msg,
+                                                                  channel,
+                                                                  thread=None,
+                                                                  attachments=attachments,
+                                                                  blocks=blocks)
+        elif reply_thread:
             obj.thread = reply_thread
             channel, thread_ts = reply_thread.split(':')
             obj.upload =\
                 lambda path: obj.sc.upload_file(path, channel, thread_ts)
             obj.reply =\
-                lambda msg, attachments=None: obj.sc.post_message(msg,
+                lambda msg, attachments=None,blocks=None: obj.sc.post_message(msg,
                                                                   channel,
                                                                   thread_ts,
-                                                                  attachments)
+                                                                  attachments=attachments,
+                                                                  blocks=blocks)
 
 @cli.command(help="Start the Metaflow bot server.")
 @click.option('--admin',

@@ -1,16 +1,16 @@
+import json
 import os
+import subprocess
 import sys
 import time
-import json
 import traceback
-import subprocess
-from itertools import chain
 from collections import defaultdict, namedtuple
+from itertools import chain
 
-from .state import MFBState
-from .slack_client import MFBSlackClientV2
 from .exceptions import MFBException
 from .process_monitor import process_fingerprint_matches
+from .slack_client import MFBSlackClientV2
+from .state import MFBState
 
 # When a monitored process disappears, wait this many
 # seconds before announcing it as a failed, lost process.
@@ -68,10 +68,10 @@ class MFBServer(object):
                              thread=ts)
 
     def reconstruct_state(self):
-        """reconstruct_state 
-        On restart, State is reconstructed using a slack channel that has 
-        the dump of all messages. 
-        
+        """reconstruct_state
+        On restart, State is reconstructed using a slack channel that has
+        the dump of all messages.
+
         :raises MFBException: [description]
         """
         for event in self._state_event_log():
@@ -110,8 +110,9 @@ class MFBServer(object):
     def loop_forever(self):
         while True:
             # TODO in PID check, check disk space, alert if > k% used
-            for event in chain(self._lost_process_events(),
-                               self._make_events(self.sc.rtm_events())):
+            for event in chain(self._lost_process_events(),\
+                                self._make_slash_command_events(self.sc.slash_command_events()),\
+                                self._make_events(self.sc.rtm_events())):
                 self._log_event(event)
                 if event.type == 'state_change':
                     self._update_state(event)
@@ -120,7 +121,10 @@ class MFBServer(object):
 
     def _lost_process_events(self):
         """_lost_process_events [summary]
-
+        This is a event monitor for the lost processes of the
+        and it runs cleanup. Oddly `cleanup-lost-run` is not present
+        even though it is in the YML file.
+        TODO: Find coverage for the actions created because of these events
         :yield: [description]
         :rtype: [type]
         """
@@ -146,10 +150,36 @@ class MFBServer(object):
                     lost[thread] = ts
         self._lost_processes = lost
 
+    def _make_slash_command_events(self,event_iter):
+        # This is a seperate iterator when /flowey like messaging is used.
+        for ev in event_iter:
+            try:
+                yield Event(type='slash_message',
+                            msg=ev.get('text',''),
+                            is_mention=False,
+                            user=ev.get('user_id'),
+                            user_name=self.state.user_name(ev.get('user_id')),
+                            chan=ev.get('channel_id'),
+                            is_im=False,
+                            is_direct=False,
+                            chan_name=self.state.channel_name(ev.get('channel_id')),
+                            ts=None,
+                            thread_ts=None)
+            except GeneratorExit:
+                pass
+            except:
+                traceback.print_exc()
+                self.logger(str(ev),
+                            head="Ignored a bad message: ",
+                            system_msg=True,
+                            bad=True)
+
+
     def _make_events(self, event_iter, admin_thread=None):
         """_make_events [summary]
-        Makes custom Event object from event's coming from 
-        slack socket subscriber. 
+        # TODO : Figure the converage of this method to understand behaviour.
+        Makes custom Event object from event's coming from
+        slack socket subscriber.
         """
         if admin_thread is None:
             admin_thread = self.admin_thread
@@ -176,9 +206,9 @@ class MFBServer(object):
                     if thread_ts == admin_thread and\
                        self.state.is_state_message(msg):
                         mfb_type = 'state_change'
-                    
+
                     # To identify messsagae by bots we can now just check for bot_id
-                    elif 'bot_id' not in ev: 
+                    elif 'bot_id' not in ev:
                         # Type 2: User messages in an existing thread. We
                         # ignore MFB's replies in existing threads.
                         if self.state.is_known_thread(chan, thread_ts):
@@ -221,22 +251,15 @@ class MFBServer(object):
                         bad=True)
 
     def _apply_rule(self, event):
-        if event.type != 'state_change':
-            # TODO : figure why this line is used ? 
-            # todo : figure Why is channel-info/user-info being called via the CLI ?s
-            if event.chan and event.chan_name is None and not event.is_im:
-                self._take_action(event, op='channel-info', channel=event.chan)
-            if event.user and event.user_name is None:
-                self._take_action(event, op='user-info', user=event.user)
         match = self.rules.match(event, self.state)
         if match:
-            rule_name, action, msg_groups, context_update = match
+            rule_name, action, msg_groups, context_update,is_slash_message = match
             self.logger(rule_name, head="  -> Invoking rule: ")
             # if the rule matched a state change event, we want to
             # send replies to the originating thread, not to the
             # admin thread of the event
             reply_thread = self.state.get_thread(event)
-            self._take_action(event, reply_thread, msg_groups, **action)
+            self._take_action(event,is_slash_message, reply_thread, msg_groups, **action)
             if context_update:
                 # ephemeral context update. Normally thread state (context)
                 # gets updated via events in the admin thread but there are
@@ -248,6 +271,7 @@ class MFBServer(object):
 
     def _take_action(self,
                      event,
+                     is_slash_message,
                      reply_thread='',
                      msg_groups='',
                      op=None,
@@ -269,8 +293,8 @@ class MFBServer(object):
         if 'PYTHONPATH' in os.environ:
             env['PYTHONPATH'] = os.environ['PYTHONPATH']
 
-        # Use the Parent server thread's environment variables. 
-        env.update({k:os.environ[k] for k in os.environ if k not in env})        
+        # Use the Parent server thread's environment variables.
+        env.update({k:os.environ[k] for k in os.environ if k not in env})
         cmd = []
         cmd += [sys.executable,
                 '-m',
@@ -281,8 +305,10 @@ class MFBServer(object):
                 '%s:%s' % (self.admin_chan, self.admin_thread),
                 '--reply-thread',
                 reply_thread]
-        cmd.extend(('action', op))
 
+        if is_slash_message:
+            cmd+=['--slash-message']
+        cmd.extend(('action', op))
         context = FormatFriendlyDict(self.state.get_thread_state(reply_thread))
         try:
             for k, v in action_spec.items():

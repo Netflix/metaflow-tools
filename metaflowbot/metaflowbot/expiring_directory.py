@@ -1,7 +1,7 @@
 import os
-import time
 import shutil
 import tempfile
+import time
 
 HOUR = 60 * 60
 

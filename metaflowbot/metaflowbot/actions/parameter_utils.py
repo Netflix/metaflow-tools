@@ -1,5 +1,6 @@
-import io
 import csv
+import io
+
 
 def read_parameter_csv(slack_client, csv_link):
     f = io.StringIO(slack_client.download_file(csv_link).decode('utf-8'))

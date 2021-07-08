@@ -1,12 +1,13 @@
 import re
-
-from datetime import datetime
 from collections import namedtuple
+from datetime import datetime
 
+import timeago
 from metaflow import Flow, namespace
 from metaflow.exception import MetaflowNotFound
 
-import timeago
+from ..message_templates.templates import DATEPARSER
+
 
 class RunResolverException(Exception):
     def __init__(self, flow):
@@ -44,7 +45,6 @@ STYLES = [# [Run/ID]
 
 PARSER = [re.compile(x, re.IGNORECASE) for x in STYLES]
 
-DATEPARSER = lambda date,format="%Y-%m-%dT%H:%M:%SZ": datetime.strptime(date,format)
 
 ResolvedRun = namedtuple('ResolvedRun',
                          ['id',

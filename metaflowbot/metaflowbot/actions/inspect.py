@@ -1,19 +1,26 @@
+import json
 import traceback
 from datetime import datetime
 from urllib.parse import urlparse
 
 import click
 import timeago
-
-from metaflow import Run, namespace
-from metaflow.exception import MetaflowNotFound
+from metaflow import Metaflow, Run, namespace
 from metaflow.datastore.util.s3util import get_s3_client
+from metaflow.exception import MetaflowNotFound
 
-from .run_resolver import RunResolver, RunResolverException, find_user,DATEPARSER
 from ..cli import action
+from ..message_templates.templates import DATEPARSER, ListFlowsTemplate
 from ..state import MFBState
+from .run_resolver import RunResolver, RunResolverException, find_user
 
 MAX_ARTIFACT_SIZE = 1000
+
+@action.command(help="List all flows associated with the metadata service")
+@click.pass_context
+def list_flows(ctx,):
+    obj = ctx.obj
+    reply_list_flows(obj)
 
 @action.command(help="Set a new run to be inspected")
 @click.option('--runspec',
@@ -54,7 +61,7 @@ def inspect_data(obj, run_id=None, step=None):
     try:
         # This step is HUGEE!
         # TODO : Change Response template here.
-        # Todo : find way to cleanly work around bottleneck induced by large artifacts. 
+        # Todo : find way to cleanly work around bottleneck induced by large artifacts.
         reply_step_info(obj, run_id, step, data_info)
     except:
         traceback.print_exc()
@@ -72,7 +79,7 @@ def inspect_logs(obj, run_id=None, step=None):
     try:
         # This step is HUGEE!
         # TODO : Change Response template here.
-        # Todo : find way to cleanly work around bottleneck induced by large artifacts. 
+        # Todo : find way to cleanly work around bottleneck induced by large artifacts.
         reply_step_info(obj, run_id, step, logs_info)
     except:
         traceback.print_exc()
@@ -93,6 +100,18 @@ def inspect(obj, run_id=None, howto=False):
         except:
             traceback.print_exc()
             obj.reply("Sorry, something went wrong. Try again after a while.")
+
+def reply_list_flows(obj):
+    try:
+        flows = Metaflow().flows
+        main_flow_meta = []
+        # blocks = ListFlowsTemplate().make_attachments(flows)
+        blocks = ListFlowsTemplate().get_slack_message(flows)
+        # obj.reply(f":star: Found {len(flows)} Flows !",attachments=blocks)
+        obj.reply(f":star: Found {len(flows)} Flows !",blocks=blocks)
+    except:
+        obj.reply(f':skull_and_crossbones: Oops something went wrong ')
+
 
 def reply_step_info(obj, run_id, step_name, info_func):
     obj.reply("Fetching info. This may take a minute...")
@@ -121,8 +140,8 @@ def reply_inspect(obj, run_id):
 
     def step_runtime(tasks):
         if tasks:
-            end = [DATEPARSER(t.finished_at) for t in tasks]
-            if all(end):
+            end = [DATEPARSER(t.finished_at) for t in tasks if t.finished_at is not None]
+            if all(end) and len(end) >0 :
                 secs = (max(end) - DATEPARSER(tasks[-1].created_at)).total_seconds()
                 if secs < 60:
                     return '%ds' % secs
@@ -243,4 +262,3 @@ def howto_inspect_run(resolver):
 "Use `inspect run` to specify the run to inspect. The run "\
 "can be running currently (it does not have to be finished) or "\
 "it can be any historical run. %s" % resolver.howto()
-

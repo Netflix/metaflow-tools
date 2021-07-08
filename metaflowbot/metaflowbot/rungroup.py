@@ -1,14 +1,13 @@
 import os
 import re
-import time
 import signal
 import subprocess
+import time
+from collections import defaultdict, namedtuple
 from threading import Thread
-from collections import namedtuple, defaultdict
 
-from .expiring_directory import ExpiringDirectory,\
-                                refresh_timestamp,\
-                                garbage_collect
+from .expiring_directory import (ExpiringDirectory, garbage_collect,
+                                 refresh_timestamp)
 
 NUM_LAST_LINES = 3
 

@@ -8,4 +8,3 @@ class MFBException(Exception):
 class MFBRulesParseException(MFBException):
     headline = "MetaflowBot rules file error"
     traceback = False
-

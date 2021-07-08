@@ -1,6 +1,6 @@
 
 # Help
-# TODO : Craft a better help message. 
+# TODO : Craft a better help message.
 
 - name: Dummy rule to define help anchors
   event_type: never match
@@ -9,7 +9,6 @@
     message: &helptext >
       Hey, I am Metaflowbot! I can help you to manage Metaflow
       runs and inspect results of past runs.
-
 
       If you want to inspect results, type the following commands
       for more information: `how to inspect run` and `how to inspect`.
@@ -62,7 +61,7 @@
     howto: true
 
 
-# Parameters 
+# Parameters
 
 - name: Show parameters but no code set
   event_type: user_message
@@ -86,6 +85,13 @@
     existing-csv: '{context[parameter_csv]}'
     show: true
 
+# List flows
+
+- name: Show all available flows
+  event_type: user_message
+  message: list flows
+  action:
+    op: list-flows
 
 # Inspect run
 
@@ -206,9 +212,16 @@
     message: *helptext
 
 
-# Tell me a Joke :) 
+# Tell me a Joke :)
 - name: Tell me a joke
   event_type: user_message
-  message: tell me a joke 
+  message: tell me a joke
   action:
     op: joke
+
+# Slash Commands Come Here
+- name : Slash Command With No Text
+  event_type: slash_message
+  message: list flows
+  action:
+    op: list-flows

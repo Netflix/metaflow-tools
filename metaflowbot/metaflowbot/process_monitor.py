@@ -1,5 +1,6 @@
 from hashlib import sha1
 
+
 def process_fingerprint_matches(fingerprint):
     pid, cmdhash = fingerprint.split(':')
     try:
@@ -17,5 +18,3 @@ def process_fingerprint(pid):
     path = '/proc/%s/cmdline' % pid
     with open(path, 'rb') as f:
         return '%s:%s' % (pid, sha1(f.read()).hexdigest())
-
-

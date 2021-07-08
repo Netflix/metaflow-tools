@@ -1,15 +1,16 @@
-# TODO : Remove Parts of Module. Keep Reading Module to show parameters. 
-# TODO : Add functionality to export parameters as a CSV ? 
-import traceback
+# TODO : Remove Parts of Module. Keep Reading Module to show parameters.
+# TODO : Add functionality to export parameters as a CSV ?
 import json
+import traceback
 
 import click
 
-from ..slack_client import MFBInvalidPermalink
 from ..cli import action
-from ..state import MFBState
 from ..code import MFBCode
-from .parameter_utils import read_parameter_csv, get_parameters
+from ..slack_client import MFBInvalidPermalink
+from ..state import MFBState
+from .parameter_utils import get_parameters, read_parameter_csv
+
 
 @action.command(help='parameters')
 @click.option('--code-run-id',
@@ -147,4 +148,3 @@ def howto_message():
            "`#row_id` to label each run. Once you have the CSV created, "\
            "you can use it by typing `use parameters from <CSV_link>` "\
            "where `<CSV_link>` is a link to the CSV snippet."
-

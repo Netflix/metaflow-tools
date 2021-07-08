@@ -1,6 +1,6 @@
+import json
 import os
 import traceback
-import json
 
 from .process_monitor import process_fingerprint
 
@@ -33,6 +33,8 @@ class MFBState(object):
     def get_thread(self, event):
         if event.type == 'state_change':
             return self._parse_message(event.msg).get('thread')
+        elif event.type == 'slash_message':
+            return event.chan
         else:
             return '%s:%s' % (event.chan, event.thread_ts)
 
@@ -157,4 +159,3 @@ class MFBState(object):
         return cls._make_message(type='disable_monitor',
                                  fingerprint=fingerprint,
                                  thread=thread)
-

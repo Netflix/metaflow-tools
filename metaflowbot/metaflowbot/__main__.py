@@ -5,6 +5,7 @@ import click
 from . import cli
 from .exceptions import MFBException
 
+
 class CliState(object):
     def __init__(self):
         self.token = None
