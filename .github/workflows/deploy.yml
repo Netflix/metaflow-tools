@@ -22,6 +22,7 @@ jobs:
           HD_AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
           HD_SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           HD_SLACK_APP_TOKEN: ${{ secrets.SLACK_APP_TOKEN }}
+          HD_USERNAME: ${{ secrets.USERNAME }}
           HD_METAFLOW_SERVICE_URL: ${{ secrets.METAFLOW_SERVICE_URL }}
           HD_ADMIN_USER_ADDRESS: ${{secrets.ADMIN_USER_ADDRESS}}
           HD_METAFLOW_DATASTORE_SYSROOT_S3: ${{secrets.METAFLOW_DATASTORE_SYSROOT_S3}}
