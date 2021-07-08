@@ -18,8 +18,8 @@ jobs:
           rollbackonhealthcheckfailed: false
           docker_heroku_process_type: "worker"
         env:
-          HD_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
-          HD_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          HD_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
+          HD_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
           HD_SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           HD_SLACK_APP_TOKEN: ${{ secrets.SLACK_APP_TOKEN }}
           HD_USERNAME: ${{ secrets.USERNAME }}
