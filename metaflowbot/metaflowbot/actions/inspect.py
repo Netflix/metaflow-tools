@@ -109,8 +109,20 @@ def reply_list_flows(obj):
         blocks = ListFlowsTemplate().get_slack_message(flows)
         # obj.reply(f":star: Found {len(flows)} Flows !",attachments=blocks)
         obj.reply(f":star: Found {len(flows)} Flows !",blocks=blocks)
-    except:
-        obj.reply(f':skull_and_crossbones: Oops something went wrong ')
+    except Exception as e:
+        err = str(e)
+        error_block = {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"""
+                ```
+                {err}
+                ```
+                """
+            }
+        }
+        obj.reply(dict(text=':skull_and_crossbones: Oops something went wrong',blocks=[error_block]))
 
 
 def reply_step_info(obj, run_id, step_name, info_func):
