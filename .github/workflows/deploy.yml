@@ -18,13 +18,13 @@ jobs:
           rollbackonhealthcheckfailed: false
           docker_heroku_process_type: "worker"
         env:
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_APP_TOKEN: ${{ secrets.SLACK_APP_TOKEN }}
-          METAFLOW_SERVICE_URL: ${{ secrets.METAFLOW_SERVICE_URL }}
-          ADMIN_USER_ADDRESS: ${{secrets.ADMIN_USER_ADDRESS}}
-          METAFLOW_DATASTORE_SYSROOT_S3: ${{secrets.METAFLOW_DATASTORE_SYSROOT_S3}}
-          METAFLOW_DATATOOLS_SYSROOT_S3: ${{secrets.METAFLOW_DATATOOLS_SYSROOT_S3}}
-          METAFLOW_DEFAULT_METADATA: "service"
-          METAFLOW_DEFAULT_DATASTORE: "s3"
+          HD_AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          HD_AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          HD_SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          HD_SLACK_APP_TOKEN: ${{ secrets.SLACK_APP_TOKEN }}
+          HD_METAFLOW_SERVICE_URL: ${{ secrets.METAFLOW_SERVICE_URL }}
+          HD_ADMIN_USER_ADDRESS: ${{secrets.ADMIN_USER_ADDRESS}}
+          HD_METAFLOW_DATASTORE_SYSROOT_S3: ${{secrets.METAFLOW_DATASTORE_SYSROOT_S3}}
+          HD_METAFLOW_DATATOOLS_SYSROOT_S3: ${{secrets.METAFLOW_DATATOOLS_SYSROOT_S3}}
+          HD_METAFLOW_DEFAULT_METADATA: "service"
+          HD_METAFLOW_DEFAULT_DATASTORE: "s3"
