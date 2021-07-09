@@ -10,7 +10,7 @@ from metaflow.datastore.util.s3util import get_s3_client
 from metaflow.exception import MetaflowNotFound
 
 from ..cli import action
-from ..message_templates.templates import DATEPARSER, ListFlowsTemplate
+from ..message_templates.templates import DATEPARSER, HowToInspect, ListFlows
 from ..state import MFBState
 from .run_resolver import RunResolver, RunResolverException, find_user
 
@@ -32,7 +32,7 @@ def inspect_run(ctx, runspec=None, howto=False):
     obj = ctx.obj
     resolver = RunResolver('inspect run')
     if howto:
-        obj.reply(howto_inspect_run(resolver))
+        obj.reply(' ',blocks=HowToInspect)
     else:
         try:
             obj.reply("Searching runs. Just a minute...")
@@ -44,8 +44,8 @@ def inspect_run(ctx, runspec=None, howto=False):
                 obj.reply("Ok, inspecting *%s*." % (runs[0].id))
                 ctx.invoke(inspect, run_id=runs[0].id)
             else:
-                reply = resolver.format_runs(runs, lambda _: None)
-                obj.reply(reply)
+                reply,blocks = resolver.format_runs(runs, lambda _: None)
+                obj.reply(reply,blocks=blocks)
         except RunResolverException as ex:
             obj.reply(str(ex))
 
@@ -93,7 +93,7 @@ def inspect_logs(obj, run_id=None, step=None):
 @click.pass_obj
 def inspect(obj, run_id=None, howto=False):
     if howto:
-        obj.reply(howto_inspect())
+        obj.reply(' ',blocks=HowToInspect)
     else:
         try:
             reply_inspect(obj, run_id)
@@ -102,27 +102,16 @@ def inspect(obj, run_id=None, howto=False):
             obj.reply("Sorry, something went wrong. Try again after a while.")
 
 def reply_list_flows(obj):
+    obj.reply(f"Alright, Listing Flows, Just a second")
     try:
         flows = Metaflow().flows
         main_flow_meta = []
         # blocks = ListFlowsTemplate().make_attachments(flows)
-        blocks = ListFlowsTemplate().get_slack_message(flows)
+        blocks = ListFlows().get_slack_message(flows)
         # obj.reply(f":star: Found {len(flows)} Flows !",attachments=blocks)
         obj.reply(f":star: Found {len(flows)} Flows !",blocks=blocks)
     except Exception as e:
-        err = str(e)
-        error_block = {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"""
-                ```
-                {err}
-                ```
-                """
-            }
-        }
-        obj.reply(dict(text=':skull_and_crossbones: Oops something went wrong',blocks=[error_block]))
+        obj.reply(dict(text=':skull_and_crossbones: Oops something went wrong'))
 
 
 def reply_step_info(obj, run_id, step_name, info_func):
@@ -265,9 +254,8 @@ def howto_inspect():
            "to find and specify runs, type `how to inspect run`.\n\n"\
            "After you have specified a run, you can use the following "\
            "commands:\n"\
-           " - `inspect` to see an overview of the run status.\n"\
-           " - `inspect data at [step]` to inspect data of the given step.\n"\
-           " - `inspect logs at [step]` to inspect logs of the given step.\n"
+
+
 
 def howto_inspect_run(resolver):
     return\

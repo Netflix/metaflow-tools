@@ -1,12 +1,11 @@
 import re
-from collections import namedtuple
 from datetime import datetime
 
 import timeago
 from metaflow import Flow, namespace
 from metaflow.exception import MetaflowNotFound
 
-from ..message_templates.templates import DATEPARSER
+from ..message_templates.templates import DATEPARSER, ResolvedRun, RunResponse
 
 
 class RunResolverException(Exception):
@@ -46,23 +45,12 @@ STYLES = [# [Run/ID]
 PARSER = [re.compile(x, re.IGNORECASE) for x in STYLES]
 
 
-ResolvedRun = namedtuple('ResolvedRun',
-                         ['id',
-                          'flow',
-                          'who',
-                          'when',
-                          'finished',
-                          'successful',
-                          'errored',
-                          'running',
-                          'code_package'])
-
 class RunResolver(object):
 
     def __init__(self, command):
         self.command = command
 
-    def resolve(self, msg, max_runs=5):
+    def resolve(self, msg, max_runs=10):
         match = None
         if msg.startswith(self.command):
             msg = msg[len(self.command):].strip()
@@ -78,35 +66,25 @@ class RunResolver(object):
             raise RunSyntaxError(self.command)
 
     def format_runs(self, runs, run_filter):
-        msg = ["I found these runs:"]
-        example = None
-        for run in runs:
-            exclude = run_filter(run)
-            if not exclude and not example:
-                example = run.id
-            msg.append(" - {x}`{run.id}`{x} _by {run.who}, {when}_ {reason}"\
-                       .format(run=run,
-                               when=timeago.format(DATEPARSER(run.when),
-                                                   now=datetime.utcnow()),
-                               x='~' if exclude else '',
-                               reason='(%s)' % exclude if exclude else ''))
-        if example:
-            msg.append("Choose one of the run IDs above by writing e.g. "\
-                       "`%s %s`" % (self.command, example))
-        else:
-            msg.append("It seems none of these runs were eligible. Try "\
-                       "another query (try `how to %s` for ideas)" %\
-                       self.command)
-        return '\n'.join(msg)
+        blocks = RunResponse().get_slack_message(runs)
+        return "Run message comes here",blocks
 
     def _query(self, query, max_runs):
         def _resolved_run(run):
+            origin_run_id = None
             if 'start' in run:
+                origin_run_id = run['start'].task.metadata_dict.get('origin-run-id')
+                if origin_run_id != 'None':
+                    origin_run_id = f"{run.pathspec.split('/')[0]}/{origin_run_id}"
+                else:
+                    origin_run_id = None
                 code = run['start'].task.metadata_dict.get('code-package-url')
             else:
                 code = None
             flow_running = run.finished_at is None
             return ResolvedRun(id=run.pathspec,
+                                tags=run.tags,
+                                origin_run_id=origin_run_id,
                                who=find_user(run),
                                flow= run.pathspec.split('/')[0],
                                when=run.created_at,
