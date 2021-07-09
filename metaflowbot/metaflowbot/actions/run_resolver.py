@@ -45,6 +45,21 @@ STYLES = [# [Run/ID]
 PARSER = [re.compile(x, re.IGNORECASE) for x in STYLES]
 
 
+def find_origin_id(run):
+    origin_run_id = None
+    # TODO : Check if this can be done more efficiently.
+    # Listinng all stepss in one go can be troublesome.
+    for step in list(run.steps()):
+        origin_run_id = step.task.metadata_dict.get('origin-run-id')
+        if origin_run_id != 'None' and origin_run_id is not None:
+            origin_run_id = f"{run.pathspec.split('/')[0]}/{origin_run_id}"
+            break
+        else:
+            origin_run_id = None
+
+    return origin_run_id
+
+
 class RunResolver(object):
 
     def __init__(self, command):
@@ -71,16 +86,7 @@ class RunResolver(object):
 
     def _query(self, query, max_runs):
         def _resolved_run(run):
-            origin_run_id = None
-            if 'start' in run:
-                origin_run_id = run['start'].task.metadata_dict.get('origin-run-id')
-                if origin_run_id != 'None':
-                    origin_run_id = f"{run.pathspec.split('/')[0]}/{origin_run_id}"
-                else:
-                    origin_run_id = None
-                code = run['start'].task.metadata_dict.get('code-package-url')
-            else:
-                code = None
+            origin_run_id = find_origin_id(run)
             flow_running = run.finished_at is None
             return ResolvedRun(id=run.pathspec,
                                 tags=run.tags,
@@ -92,7 +98,7 @@ class RunResolver(object):
                                 successful = run.successful,
                                 errored= not flow_running and not run.successful,
                                 running = flow_running,
-                               code_package=code)
+                               code_package=None)
 
         try:
             namespace(None)

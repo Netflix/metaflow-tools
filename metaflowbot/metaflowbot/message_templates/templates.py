@@ -166,7 +166,7 @@ class RunResponse(Template):
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": f":zap: {run.id}"
+                    "text": f":zap: {run.id} {'(Resumed)' if run.origin_run_id is not None else ''}"
                 },
             },
             {
@@ -201,7 +201,7 @@ class RunResponse(Template):
 
         ]
         if run.origin_run_id is not None:
-            block[1]['fields'].append(
+            block[1]['fields'].insert(0,
                 {
                         "type": "mrkdwn",
                         "text": f"*Originated From: {run.origin_run_id} * "
