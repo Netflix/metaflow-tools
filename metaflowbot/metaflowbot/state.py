@@ -33,8 +33,6 @@ class MFBState(object):
     def get_thread(self, event):
         if event.type == 'state_change':
             return self._parse_message(event.msg).get('thread')
-        elif event.type == 'slash_message':
-            return event.chan
         else:
             return '%s:%s' % (event.chan, event.thread_ts)
 

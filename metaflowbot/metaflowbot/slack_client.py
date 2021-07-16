@@ -92,29 +92,25 @@ class SlackMessageQueue(Queue):
             pass
         return queue_items
 
+
 def process(message_event_queue:SlackMessageQueue,\
-            slash_command_queue:SlackMessageQueue,\
             client: SocketModeClient,\
             req: SocketModeRequest):
-    """
-    Some things To Think upon.
-    Message body can be found here : https://api.slack.com/events/message.channels
-    - @version commands.
-    - all possible ways to talk to bot
-    - Configuration to savin and team.
-    """
     if req.type == "events_api":
-        # Acknowledge the request anyway
+        # Slash commands will have a different req.type
+        """
+        # Permisssions for :
+            - https://api.slack.com/events/message.im
+            - https://api.slack.com/events/app_mention
+        Payload from different events can be found : https://api.slack.com/events/
+        Current `req.payload['event'].type == app_mention | message`
+        """
+        # TODO: Should we Instant custom Acknowledgement.
         # ! acknowledgement is needed to ensure messages are not Double sent
+        # Acknowledge the request anyway
         response = SocketModeResponse(envelope_id=req.envelope_id)
         client.send_socket_mode_response(response)
         message_event_queue.injest([req.payload['event']])
-
-    elif req.type=='slash_commands':
-        # Response Structure Present Here : https://api.slack.com/apis/connections/socket-implement#command
-        response = SocketModeResponse(envelope_id=req.envelope_id,payload=f':mag_right: Executing Command.... Please Wait...')
-        client.send_socket_mode_response(response)
-        slash_command_queue.injest([req.payload])
 
 class SlackSocketSubscriber(Thread):
     """SlackSocketSubscriber
@@ -125,10 +121,9 @@ class SlackSocketSubscriber(Thread):
 
     TODO : Ensure this thread runs without any kind of failure. Stress test the thread.
     """
-    def __init__(self,slack_token,message_event_queue:Queue,slash_command_queue:Queue) -> None:
+    def __init__(self,slack_token,message_event_queue:Queue) -> None:
         super().__init__(daemon=True)
         self.message_event_queue = message_event_queue
-        self.slash_command_queue = slash_command_queue
         # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running.
         self.slack_token = slack_token
 
@@ -137,13 +132,11 @@ class SlackSocketSubscriber(Thread):
         wire up the socket feed and the function to filter flush items to queue
         """
         self.sc = SocketModeClient(
-            # TODO : Should it be this ?
             # This app-level token will be used only for establishing a connection
             app_token=os.environ.get("SLACK_APP_TOKEN"),  # xapp-A111-222-xyz
         )
-        # Adding two queues because I want to keep slash commands and other commands seperate
         # Bind the queue to ensure Message Paassig.
-        subscriber_func = partial(process,self.message_event_queue,self.slash_command_queue)
+        subscriber_func = partial(process,self.message_event_queue)
         self.sc.socket_mode_request_listeners.append(subscriber_func)
         # Establish a WebSocket connection to the Socket Mode servers
         self.sc.connect()
@@ -152,10 +145,9 @@ class SlackSocketSubscriber(Thread):
 
 def create_slack_subscriber(slack_token:str):
     message_event_queue = SlackMessageQueue()
-    slash_command_queue = SlackMessageQueue()
-    socket_thread = SlackSocketSubscriber(slack_token,message_event_queue,slash_command_queue)
+    socket_thread = SlackSocketSubscriber(slack_token,message_event_queue)
     socket_thread.start()
-    return message_event_queue,slash_command_queue,socket_thread
+    return message_event_queue,socket_thread
 
 
 class MFBSlackClientV2(object):
@@ -186,7 +178,6 @@ class MFBSlackClientV2(object):
         self._slack_token = slack_token
         self._last_rtm_events = 0
         self._rmt_feed_queue = None
-        self._slash_command_queue = None
         self._socket_tread = None
 
     @property
@@ -229,7 +220,7 @@ class MFBSlackClientV2(object):
     def _connect(self):
         # Instantiate event reader over here.
         if not self.rtm_connected:
-            self._rmt_feed_queue,self._slash_command_queue,self._socket_tread = create_slack_subscriber(self.token)
+            self._rmt_feed_queue,self._socket_tread = create_slack_subscriber(self.token)
             self.rtm_connected = True
         return self.rtm_connected
 
@@ -251,10 +242,6 @@ class MFBSlackClientV2(object):
         self._connect()
         return self._rmt_feed_queue.flush()
 
-    def slash_command_events(self):
-        self._connect()
-        return self._slash_command_queue.flush()
-
     def im_channel(self, user):
         # Older API : im.open --> Deprecated
         # New API : conversations.open
@@ -269,7 +256,6 @@ class MFBSlackClientV2(object):
                 raise MFBUserNotFound(user)
             else:
                 raise
-
     def user_by_email(self, email):
         # permission : users.lookupByEmail
         try:
@@ -279,38 +265,6 @@ class MFBSlackClientV2(object):
                 raise MFBUserNotFound(email)
             else:
                 raise
-
-    def user_info(self, user):
-        # permission : users.info
-        try:
-            return self.sc.users_info(user=user)['user']
-        except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'user_not_found':
-                raise MFBUserNotFound(user)
-            else:
-                raise
-
-    def channel_info(self, channel):
-        # permission : channels.info :: Deprecated
-        # conversations.info is the required permission
-        try:
-            return self.sc.conversations_info(channel=channel)['channel']
-        except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'user_not_found':
-                raise MFBChannelNotFound(channel)
-            else:
-                raise
-
-    def direct_channels(self):
-        """direct_channels
-        This previously used `im.list` and `ims` as a method to get data.
-
-        In this version it will move to `users.conversations` or `conversations.list`
-
-        TODO : Find out if method is needed or not.
-        """
-        return self._page_iter(self.sc.conversations_list,'channels')
-
     def past_events(self, channel, **opts):
         # API : conversations.history
         # SCOPE : channels:history
@@ -335,20 +289,6 @@ class MFBSlackClientV2(object):
         return (event for event in self._format_history(events, **opts)
                 if 'reply_count' not in event)
 
-    # Not Useful Right
-    def download_file(self, file_permalink):
-        # API : files.info
-        m = PERMALINK_FILE_ID.match(file_permalink)
-        if m:
-            try:
-                info = self.sc.files_info(file=m.group(1))['file']
-            except MFBRequestFailed:
-                raise MFBInvalidPermalink(file_permalink)
-            else:
-                return self._request_file(info['url_private'])
-        else:
-            raise MFBInvalidPermalink(file_permalink)
-
     def _format_history(self, events, max_number=None, sort_key='ts'):
         if max_number is not None:
             events = islice(events, max_number)
@@ -370,21 +310,3 @@ class MFBSlackClientV2(object):
                 args['cursor'] = cursor
             else:
                 break
-
-    def _request_file(self, url):
-        msg = None
-        for i in range(NUM_RETRIES):
-            try:
-                headers = {'Authorization': 'Bearer ' + self.token}
-                resp = requests.get(url, headers=headers)
-            except:
-                pass
-            else:
-                msg = resp.text
-                status = str(resp.status_code)[0]
-                if status == '2':
-                    return resp.content
-                elif status == '4':
-                    break
-            time.sleep(2**i)
-        raise MFBClientException('download_file', {'url': url}, msg)

@@ -111,7 +111,6 @@ class MFBServer(object):
         while True:
             # TODO in PID check, check disk space, alert if > k% used
             for event in chain(self._lost_process_events(),\
-                                self._make_slash_command_events(self.sc.slash_command_events()),\
                                 self._make_events(self.sc.rtm_events())):
                 self._log_event(event)
                 if event.type == 'state_change':
@@ -150,30 +149,6 @@ class MFBServer(object):
                     lost[thread] = ts
         self._lost_processes = lost
 
-    def _make_slash_command_events(self,event_iter):
-        # This is a seperate iterator when /flowey like messaging is used.
-        for ev in event_iter:
-            try:
-                yield Event(type='slash_message',
-                            msg=ev.get('text',''),
-                            is_mention=False,
-                            user=ev.get('user_id'),
-                            user_name=self.state.user_name(ev.get('user_id')),
-                            chan=ev.get('channel_id'),
-                            is_im=False,
-                            is_direct=False,
-                            chan_name=self.state.channel_name(ev.get('channel_id')),
-                            ts=None,
-                            thread_ts=None)
-            except GeneratorExit:
-                pass
-            except:
-                traceback.print_exc()
-                self.logger(str(ev),
-                            head="Ignored a bad message: ",
-                            system_msg=True,
-                            bad=True)
-
 
     def _make_events(self, event_iter, admin_thread=None):
         """_make_events [summary]
@@ -185,7 +160,7 @@ class MFBServer(object):
             admin_thread = self.admin_thread
         for ev in event_iter:
             try:
-                if ev['type'] == 'message':
+                if ev['type'] == 'message' or ev['type'] == 'app_mention':
                     thread_ts = ev.get('thread_ts')
                     chan = ev.get('channel')
                     msg = ev.get('text', '')
@@ -224,7 +199,7 @@ class MFBServer(object):
                                 thread_ts = ts
                     if mfb_type:
                         yield Event(type=mfb_type,
-                                    msg=msg,
+                                    msg=msg.strip(),
                                     is_mention=is_mention,
                                     user=user,
                                     user_name=self.state.user_name(user),
@@ -253,13 +228,13 @@ class MFBServer(object):
     def _apply_rule(self, event):
         match = self.rules.match(event, self.state)
         if match:
-            rule_name, action, msg_groups, context_update,is_slash_message = match
+            rule_name, action, msg_groups, context_update = match
             self.logger(rule_name, head="  -> Invoking rule: ")
             # if the rule matched a state change event, we want to
             # send replies to the originating thread, not to the
             # admin thread of the event
             reply_thread = self.state.get_thread(event)
-            self._take_action(event,is_slash_message, reply_thread, msg_groups, **action)
+            self._take_action(event, reply_thread, msg_groups, **action)
             if context_update:
                 # ephemeral context update. Normally thread state (context)
                 # gets updated via events in the admin thread but there are
@@ -271,7 +246,6 @@ class MFBServer(object):
 
     def _take_action(self,
                      event,
-                     is_slash_message,
                      reply_thread='',
                      msg_groups='',
                      op=None,
@@ -306,8 +280,6 @@ class MFBServer(object):
                 '--reply-thread',
                 reply_thread]
 
-        if is_slash_message:
-            cmd+=['--slash-message']
         cmd.extend(('action', op))
         context = FormatFriendlyDict(self.state.get_thread_state(reply_thread))
         try:

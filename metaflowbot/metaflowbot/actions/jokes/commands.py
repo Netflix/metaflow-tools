@@ -4,9 +4,8 @@ from urllib.parse import urlparse
 
 import click
 import timeago
-
-from ..cli import action
-from ..state import MFBState
+from metaflowbot.cli import action
+from metaflowbot.state import MFBState
 
 MAX_ARTIFACT_SIZE = 1000
 import json

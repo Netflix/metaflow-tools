@@ -1,0 +1,64 @@
+# Inspect run
+
+- name: Define a run to be inspected
+  event_type: user_message
+  message: inspect run (.+)
+  action:
+    op: inspect-run
+    runspec: '{event.msg}'
+
+
+- name: Inspect run without an argument and no run set, show help
+  event_type: user_message
+  message: inspect run
+  context:
+    inspect.run_id: null
+  action:
+    op: inspect-run
+    howto: true
+
+- name: Inspect run without an argument but a run is set, basic inspect
+  event_type: user_message
+  message: inspect run
+  action:
+    op: inspect
+    run-id: '{context[inspect.run_id]}'
+
+# Inspect
+
+- name: Inspect but no run set
+  event_type: user_message
+  message: inspect
+  context:
+    inspect.run_id: null
+  action:
+    op: inspect-run
+    howto: true
+
+- name: Inspect the chosen run
+  event_type: user_message
+  message: inspect
+  action:
+    op: inspect
+    run-id: '{context[inspect.run_id]}'
+
+- name: How to inspect run
+  event_type: user_message
+  message: how to inspect run
+  action:
+    op: inspect-run
+    howto: true
+
+- name: How to inspect (fallback)
+  event_type: user_message
+  message: how to inspect(.*)
+  action:
+    op: inspect
+    howto: true
+
+- name: How to inspect (fallback)
+  event_type: new_thread
+  message: (how to inspect(.*))
+  action:
+    op: inspect
+    howto: true

@@ -1,0 +1,5 @@
+- name: Tell me a Joke
+  event_type: user_message
+  message: tell me a joke
+  action:
+    op: joke

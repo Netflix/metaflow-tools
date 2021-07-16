@@ -9,9 +9,6 @@ from .rules import MFBRules
 from .server import MFBServer
 from .slack_client import MFBSlackClientV2
 
-DEFAULT_RULES = os.path.join(os.path.dirname(__file__),
-                             'metaflowbot_rules.yaml')
-
 LOGGER_TIMESTAMP = 'magenta'
 LOGGER_COLOR = 'green'
 LOGGER_BAD_COLOR = 'red'
@@ -31,10 +28,6 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
               is_flag=True,
               default=False,
               help="Debug mode: Print to stdout instead of sending to Slack")
-@click.option('--slash-message',
-              is_flag=True,
-              default=False,
-              help="Slash message responses for actions (do not set manually)")
 @click.option('--slack-token',
               help="Token for the Slack API.")
 @click.option('--admin-thread',
@@ -44,7 +37,6 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
 @click.pass_obj
 def cli(obj,
         debug=False,
-        slash_message=False,
         slack_token=None,
         admin_thread=None,
         reply_thread=None):
@@ -59,19 +51,7 @@ def cli(obj,
             obj.publish_state =\
                 lambda msg: obj.sc.post_message(msg, *admin_thread.split(':'))
 
-        # If slash message is passed the reply_thread will be the channnel id
-        # This is becaus slash_commands are ephemeral and cannot be threaded.
-        if slash_message:
-            channel = reply_thread
-            obj.upload =\
-                lambda path: obj.sc.upload_file(path, channel, thread=None)
-            obj.reply =\
-                lambda msg, attachments=None,blocks=None: obj.sc.post_message(msg,
-                                                                  channel,
-                                                                  thread=None,
-                                                                  attachments=attachments,
-                                                                  blocks=blocks)
-        elif reply_thread:
+        if reply_thread:
             obj.thread = reply_thread
             channel, thread_ts = reply_thread.split(':')
             obj.upload =\
@@ -88,10 +68,6 @@ def cli(obj,
               required=True,
               help="Email of the admin user (used to idenify the admin "
                    "Slack account).")
-@click.option('--rules',
-              default=DEFAULT_RULES,
-              show_default=True,
-              help="Rules file.")
 @click.option('--new-admin-thread',
               is_flag=True,
               default=False,
@@ -109,7 +85,6 @@ def cli(obj,
 @click.pass_obj
 def server(obj,
            admin=None,
-           rules=None,
            new_admin_thread=False,
            load_state=None,
            action_user=None):
@@ -120,8 +95,8 @@ def server(obj,
     if os.getuid() != 0:
         action_user = None
 
-    rules_obj = MFBRules(rules)
-    log("Loaded %d rules from %s" % (len(rules_obj), rules))
+    rules_obj = MFBRules()
+    log("Loaded %d rules" % (len(rules_obj)))
 
     server = MFBServer(obj.sc, admin, rules_obj, logger, action_user)
     if new_admin_thread:

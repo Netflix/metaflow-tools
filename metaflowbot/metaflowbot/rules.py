@@ -2,6 +2,7 @@ import re
 
 import yaml
 
+from . import SUPPORTED_RULES
 from .exceptions import MFBRulesParseException
 
 
@@ -10,35 +11,45 @@ class MFBRules(object):
     Object that runs the rule framework on the Bot.
 
     Currently Handled Events :
+        # Internal Events
         - never match
+        - lost_process
+        # User Facing events:
         - new_thread
             - Publishes state
-        - lost_process
         - user_message
             - Some messsage Publishes state
-        - slash_message
-
-    Spurious events
+        # Possible User Facing events in Future
+            - slash_message : Possible in future
     """
 
-    def __init__(self, path):
-        with open(path) as f:
-            try:
-                self.rules = yaml.load(f,Loader=yaml.SafeLoader)
-            except Exception as ex:
-                raise MFBRulesParseException(str(ex))
-
-        for i, rule in enumerate(self.rules):
-            if not all(k in rule for k in ('name', 'event_type', 'action')):
-                raise MFBRulesParseException("Rule #%d does not have name, "
-                                             "event_type, and action "
-                                             "specified." % (i + 1))
-            msg = rule.get('message')
-            if msg:
-                rule['message'] = re.compile(msg, flags=re.IGNORECASE)
+    def __init__(self):
+        # Changed the way rules are loaded here from Initial version.
+        # Now every subpackage botaction needs toe expose a `RULES` object which
+        # gets registered at init to make the bot actions more customizable.
+        self.rules = SUPPORTED_RULES
 
     def __len__(self):
         return len(self.rules)
+
+    @staticmethod
+    def make_subpackage_rules(data):
+        try:
+            # Todo Run Rule Parsing here.
+            # todo check for important keys heree
+            rules = yaml.load(data,Loader=yaml.SafeLoader)
+        except Exception as ex:
+            raise MFBRulesParseException(str(ex))
+
+        for i, rule in enumerate(rules):
+            if not all(k in rule for k in ('name', 'event_type', 'action')):
+                raise MFBRulesParseException("Rule #%d does not have name, "
+                                            "event_type, and action "
+                                            "specified." % (i + 1))
+            msg = rule.get('message')
+            if msg:
+                rule['message'] = re.compile(msg, flags=re.IGNORECASE)
+        return rules
 
     def match(self, event, state):
         for rule in self.rules:
@@ -77,5 +88,4 @@ class MFBRules(object):
             return rule['name'],\
                    rule['action'],\
                    re_match.groups() if re_match else [],\
-                   rule.get('ephemeral_context_update'),\
-                   event_type=='slash_message'
+                   rule.get('ephemeral_context_update')

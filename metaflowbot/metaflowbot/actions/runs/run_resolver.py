@@ -1,16 +1,40 @@
 import re
+from collections import namedtuple
 from datetime import datetime
 
 import timeago
 from metaflow import Flow, namespace
 from metaflow.exception import MetaflowNotFound
+from metaflowbot.message_templates.templates import DATEPARSER
 
-from ..message_templates.templates import DATEPARSER, ResolvedRun, RunResponse
+ResolvedRun = namedtuple('ResolvedRun',
+                         ['id',
+                          'flow',
+                          'who',
+                          'when',
+                          'finished',
+                          'successful',
+                          'errored',
+                          'running',
+                          'running_time',
+                          'tags'])
 
-
+ResolvedStep = namedtuple('ResolvedStep',[
+    'num_tasks',
+    'name',
+    'started_on',
+    'finished_at',
+    'step_runtime',
+])
 class RunResolverException(Exception):
     def __init__(self, flow):
         self.flow = flow
+
+    def __str__(self):
+        return "Couldn't find the RunID. :meow_dead: "
+class RunNotFound(RunResolverException):
+    def __init__(self, flow,runid):
+        super().__init__(flow)
 
 class RunSyntaxError(RunResolverException):
     def __init__(self, command):
@@ -46,6 +70,9 @@ PARSER = [re.compile(x, re.IGNORECASE) for x in STYLES]
 
 
 def find_origin_id(run):
+    """find_origin_id
+    Needs to be better
+    """
     origin_run_id = None
     # TODO : Check if this can be done more efficiently.
     # Listinng all stepss in one go can be troublesome.
@@ -60,12 +87,39 @@ def find_origin_id(run):
     return origin_run_id
 
 
+def running_time(run):
+    try:
+        if run.finished:
+            if run.successful:
+                mins = (DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)).total_seconds() / 60
+                return mins
+    except:
+        pass
+    return None
+
+def step_runtime(tasks):
+    # Code dies here at times because
+    # t.finished_at is somehow linked to S3
+    # More info at : https://github.com/Netflix/metaflow/blob/48e37bea3ea4e83ddab8227869bbe56b52d9957d/metaflow/client/core.py#L956
+    if tasks:
+        try:
+            end = [DATEPARSER(t.finished_at) for t in tasks if t.finished_at is not None]
+            if all(end) and len(end) >0 :
+                secs = (max(end) - DATEPARSER(tasks[-1].created_at)).total_seconds()
+                if secs < 60:
+                    return '%ds' % secs
+                else:
+                    return '%dmin' % (secs / 60)
+        except:
+            pass
+    return '?'
+
 class RunResolver(object):
 
     def __init__(self, command):
         self.command = command
 
-    def resolve(self, msg, max_runs=10):
+    def resolve(self, msg, max_runs=3):
         match = None
         if msg.startswith(self.command):
             msg = msg[len(self.command):].strip()
@@ -80,25 +134,19 @@ class RunResolver(object):
         else:
             raise RunSyntaxError(self.command)
 
-    def format_runs(self, runs, run_filter):
-        blocks = RunResponse().get_slack_message(runs)
-        return "Run message comes here",blocks
-
     def _query(self, query, max_runs):
         def _resolved_run(run):
-            origin_run_id = find_origin_id(run)
             flow_running = run.finished_at is None
             return ResolvedRun(id=run.pathspec,
                                 tags=run.tags,
-                                origin_run_id=origin_run_id,
                                who=find_user(run),
                                flow= run.pathspec.split('/')[0],
                                when=run.created_at,
+                               running_time=running_time(run),
                                 finished = run.finished,
                                 successful = run.successful,
                                 errored= not flow_running and not run.successful,
-                                running = flow_running,
-                               code_package=None)
+                                running = flow_running)
 
         try:
             namespace(None)
@@ -108,7 +156,10 @@ class RunResolver(object):
 
         runid = query.get('runid')
         if runid:
-            runs = [flow[runid]]
+            try:
+                runs = [flow[runid]]
+            except KeyError:
+                raise RunNotFound(flow,runid)
         else:
             tags = []
             if query.get('tag'):
@@ -120,18 +171,6 @@ class RunResolver(object):
                 runs = runs[:1]
         return map(_resolved_run, runs[:max_runs])
 
-    def howto(self):
-        return\
-"There are a number of ways to refer to an existing run:\n"\
-" - Use an existing run ID: `{cmd} HelloFlow/12`.\n"\
-" - Use a flow name: `{cmd} HelloFlow`.\n"\
-" - Use a flow name with a user: `{cmd} dberg's HelloFlow`.\n"\
-" - Use the latest run of a user: `{cmd} dberg's latest run of HelloFlow`.\n"\
-" - Use the latest run by anyone: `{cmd} the latest run of HelloFlow`.\n"\
-"You can filter by a tag by appending `tagged some_tag` in any of the "\
-"expressions above except the first one. If there are multiple "\
-"eligible runs, I will show you a list of run IDs to choose from."\
-.format(cmd=self.command)
 
 def find_user(run):
     usrlst = [tag for tag in run.tags if tag.startswith('user:')]

@@ -1,2 +1,1 @@
-# removed `admin` as there is no such module.
-from . import basic, inspect, jokes, parameters, use_code
+__path__ = __import__('pkgutil').extend_path(__path__, __name__)
