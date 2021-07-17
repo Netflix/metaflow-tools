@@ -25,9 +25,12 @@ The setup follows two parts.
     export SLACK_APP_TOKEN=xapp-1-AAAAAAAAAAA-2222222222222-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     export SLACK_BOT_TOKEN=xoxb-2222222222222-2222222222222-AAAAAAAAAAAAAAAAAAAAAAAA
     ```
+2. Install Requirements
+    ```sh
+    pip install -r requirements.txt
+    ```
 
-2. Run the BOT :
-
+3. Run the BOT with metaflowbot as [root directory](../)
     ```sh
     python -m metaflowbot --slack-token $(echo $SLACK_BOT_TOKEN) server --admin me@server.com --new-admin-thread
     ```
