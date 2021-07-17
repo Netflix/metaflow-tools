@@ -8,9 +8,9 @@ An example of how to implement pkgutil style [subpackage](https://github.com/pyp
 Create your custom action with the following folder structure
 
 ```
-your_bot_action/
-├ metaflowbot/               # the name of this dir doesn't matter
-│  ├ setup.py
+your_bot_action/ # the name of this dir doesn't matter
+├ setup.py
+├ metaflowbot/
 │  └ action/      # namespace package name
 │      ├__init__.py    # special pkgutil namespace __init__.py
 │      └ your-special-acton/            # dir name must match the package name from `setup.py`

@@ -16,7 +16,7 @@ In the above event lifecycle, the `metaflowbot` uses Slack as a stateful store f
 
 - `MFBState` is present in [metaflowbot.state](../metaflowbot/rules.py). This class helps hold state about the open threads and conversations with users. It is used by `MFBServer`.
 
-- [metaflowbot.actions](../metaflowbot/actions) is the subpackage that holds all the actions of the bot. Ways to create new subpackages can be found [here](./Create-Your-Action.md).
+- [metaflowbot.actions](../metaflowbot/actions) is the subpackage that holds all the actions of the bot. Ways to create new subpackages can be found [here](./Creating-Your-Action.md).
 
 ## Event Lifecycle Psuedo Code
 ```python
