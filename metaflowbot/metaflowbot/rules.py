@@ -12,7 +12,6 @@ class MFBRules(object):
 
     Currently Handled Events :
         # Internal Events
-        - never match
         - lost_process
         # User Facing events:
         - new_thread

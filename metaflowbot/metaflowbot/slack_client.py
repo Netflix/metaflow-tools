@@ -163,12 +163,6 @@ class MFBSlackClientV2(object):
 
     `SocketModeClient` leverages a Message queue which gets the RTM events.
 
-    How to do threading via python API : https://slack.dev/python-slack-sdk/web/index.html
-
-    Deprecations :
-        - `im.list` : https://api.slack.com/methods/im.list
-            - Replacements : `conversations.list` , `users.conversations`
-
     """
     def __init__(self,slack_token) -> None:
         # plug in appropriate slack_sdk. Ensure `slack_token` is there.

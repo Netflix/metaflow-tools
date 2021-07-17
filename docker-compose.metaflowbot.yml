@@ -1,9 +1,0 @@
-version: "3"
-services:
-  metaflowbot:
-    image: "metaflowbot:latest"
-    container_name: "metaflowbot"
-    environment:
-      - SLACK_APP_TOKEN=xapp-1-AAAAAAAAAAA-2222222222222-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-      - SLACK_BOT_TOKEN=xoxb-2222222222222-2222222222222-AAAAAAAAAAAAAAAAAAAAAAAA
-      - ADMIN_USER_ADDRESS=server@admin.com
