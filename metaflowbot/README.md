@@ -6,6 +6,8 @@ Thorough Documentation is present in the [Documentation folder](./Docs)
 
 - `@flowey help` | `@flowey hi` : Help
 
+- `@flowey tell me a joke`
+
 - `@flowey inspect` | `@flowey how to inspect` : How to inspect
 
 - `@flowey inspect run HelloFlow` : Inspect `Run`s of a particular `Flow`
