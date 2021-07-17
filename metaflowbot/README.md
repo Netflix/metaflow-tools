@@ -24,7 +24,9 @@ Thorough Documentation is present in the [Documentation folder](./Docs)
 ## Metaflow Bot UX (How Will the bot Behave)
 
 There are two places to interact with Metaflowbot : on a `channel` or via `direct message`. But for either places, the following is the general behavior of the bot:
-> *when a user messages the bot, the bot will open a new message thread and will engage with the user on the same thread*.
+
+> *When a user messages the bot, the bot will open a new message thread and will engage with the user on the same thread. The user can open multiple threads with the bot. Each thread is an independent discussion*
+
 The following are interaction/UX restrictions based on where the user is conversing with the Metaflow bot.
 ### Talking to the bot on a `channel`
 
