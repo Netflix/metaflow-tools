@@ -8,11 +8,12 @@ In the above event lifecycle, the `metaflowbot` uses Slack as a stateful store f
 ## Event Lifecycle Psuedo Code
 ```python
 
-while server runs forever: # metaflowbot.server.MFBServer
-	- foreach event from  slack: # metaflowbot.slack_client.MFBSlackClientV2
-		- convert events to MFBot Compatible events: # metaflowbot.server._make_events
-            - if event matches rules # metaflowbot.rules.MFBRules
-                - apply action matches by rule # metaflowbot.server.actions
+while server runs forever: # metaflowbot.server.MFBServer.loop_forever()
+    foreach event from slack: # metaflowbot.slack_client.MFBSlackClientV2.rtm_events()
+        convert events to MFBot Compatible events: # metaflowbot.server._make_events(event)
+            if event matches rules: # metaflowbot.rules.MFBRules.match(event,rule)
+                apply action matches by rule # metaflowbot.server.actions
+                # Calls MFBServer._take_action
                 # Every action is invoked as a seperate python process.
 ```
 
