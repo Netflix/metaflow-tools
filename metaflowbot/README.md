@@ -14,11 +14,11 @@ Thorough Documentation is present in the [Documentation folder](./Docs)
 
 - `@flowey inspect run savin's HelloFlow tagged some_tag` : Inspect `Run`s of a particular `Flow`
 
-- Inspect an individual `Run` instance : `@flowey inspect run HelloFlow/12`
+- `@flowey inspect run HelloFlow/12` : Inspect an individual `Run` instance
 
-- Inspect an individual `Run` instance : `@flowey inspect run the latest run of HelloFlow`
+- `@flowey inspect run the latest run of HelloFlow` : Inspect an individual `Run` instance
 
-- Inspect an individual `Run` instance : `@flowey inspect run dberg's latest run of HelloFlow`
+- `@flowey inspect run dberg's latest run of HelloFlow` : Inspect an individual `Run` instance
 
 
 ## Metaflow Bot UX (How Will the bot Behave)
