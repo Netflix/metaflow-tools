@@ -85,7 +85,8 @@ data "aws_iam_policy_document" "metaflow_policy" {
 
     actions = [
       "kms:Decrypt",
-      "kms:Encrypt"
+      "kms:Encrypt",
+      "kms:GenerateDataKey"
     ]
 
     resources = [
