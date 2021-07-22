@@ -5,6 +5,7 @@ from datetime import datetime
 import timeago
 from metaflow import Flow, namespace
 from metaflow.exception import MetaflowNotFound
+
 from metaflowbot.message_templates.templates import DATEPARSER
 
 ResolvedRun = namedtuple('ResolvedRun',
@@ -60,7 +61,7 @@ class NoRuns(RunResolverException):
                "flow name, `%s %s`." % (self.command, self.flow)
 
 STYLES = [# [Run/ID]
-          "(?P<flow>[a-z0-9_]+)/(?P<runid>[a-z0-9\-]+)",
+          "(?P<flow>[a-z0-9_]+)/(?P<runid>[a-z0-9_\-]+)",
           # (someone's / the) (latest run of) [flow], (tagged tag)
           "((?P<user>[a-z]+)'s?|the)? ?(?P<latest>latest run of )?"\
           "(?P<flow>[a-z0-9_]+),?( tagged (?P<tag>.+))?"
