@@ -172,6 +172,19 @@ class RunResolver(object):
                 runs = runs[:1]
         return map(_resolved_run, runs[:max_runs])
 
+    def howto(self):
+        return\
+            "There are a number of ways to refer to an existing run:\n"\
+            " - Use an existing run ID: `{cmd} HelloFlow/12`.\n"\
+            " - Use a flow name: `{cmd} HelloFlow`.\n"\
+            " - Use a flow name with a user: `{cmd} dberg's HelloFlow`.\n"\
+            " - Use the latest run of a user: `{cmd} dberg's latest run of HelloFlow`.\n"\
+            " - Use the latest run by anyone: `{cmd} the latest run of HelloFlow`.\n"\
+            "You can filter by a tag by appending `tagged some_tag` in any of the "\
+            "expressions above except the first one. If there are multiple "\
+            "eligible runs, I will show you a list of run IDs to choose from."\
+            .format(cmd=self.command)
+
 
 def find_user(run):
     usrlst = [tag for tag in run.tags if tag.startswith('user:')]

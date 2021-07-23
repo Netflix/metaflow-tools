@@ -33,8 +33,7 @@ def inspect_run(ctx, runspec=None, howto=False):
     obj = ctx.obj
     resolver = RunResolver('inspect')
     if howto:
-        reply,blocks = InspectHelp(help_blocks=make_help('inspect')).make_help()
-        obj.reply(reply,blocks=blocks)
+        obj.reply(howto_inspect_run(resolver))
     else:
         try:
             obj.reply("Searching runs. Just a minute...")
@@ -63,9 +62,9 @@ def inspect_run(ctx, runspec=None, howto=False):
               help="Only show help text")
 @click.pass_obj
 def inspect(obj, run_id=None, howto=False):
+    resolver = RunResolver('inspect')
     if howto:
-        reply,blocks = InspectHelp(help_blocks=make_help('inspect')).make_help()
-        obj.reply(reply,blocks=blocks)
+        obj.reply(howto_inspect_run(resolver))
     else:
         try:
             reply_inspect(obj, run_id)
@@ -145,3 +144,10 @@ def reply_inspect(obj, run_id):
     attachments = step_resolver(steps)
     obj.reply(resolved_run,\
             attachments=attachments)
+
+
+def howto_inspect_run(resolver):
+    return\
+        "Use `inspect` to specify the run to inspect. The run "\
+        "can be running currently (it does not have to be finished) or "\
+        "it can be any historical run. %s" % resolver.howto()
