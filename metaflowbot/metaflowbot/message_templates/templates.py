@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import Enum
 
 import timeago
+from metaflow.metaflow_version import get_version
 
 from ..version import __version__
 
@@ -88,30 +89,12 @@ class BotVersion(Template):
         return service_url
 
     def get_slack_message(self):
-        message = f"I am on version {__version__}"\
-                f". I am using the following Metadata endpoint : `{self._get_metadata_endpoint()}`"
-        message_block = [
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Metaflow Bot Version"
-                    }
-                },
-                {
-                    "type":"divider",
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": message
-                    }
-                },
+        message = f"Running Metaflowbot version `{__version__}` with Metaflow version "\
+                f"`{get_version(pep440=True)}` and "\
+                "configured with metaflow service endpoint "\
+                f"- `{self._get_metadata_endpoint()}`"
 
-        ]
-        message_block.extend(self.make_context_block())
-        return message,message_block
+        return message
 
 # Block Messages on slack : https://api.slack.com/reference/block-kit/blocks
 class IntroMessage(Template):

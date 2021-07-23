@@ -1,4 +1,5 @@
 import click
+
 from metaflowbot.cli import action
 from metaflowbot.message_templates.templates import BotVersion, IntroMessage
 from metaflowbot.state import MFBState
@@ -25,5 +26,5 @@ def reply(obj, message=None):
 @action.command(help='version')
 @click.pass_obj
 def version(obj):
-    message,blocks = BotVersion().get_slack_message()
-    obj.reply(message,blocks=blocks)
+    message= BotVersion().get_slack_message()
+    obj.reply(message)

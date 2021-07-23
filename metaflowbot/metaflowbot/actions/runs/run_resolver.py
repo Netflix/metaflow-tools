@@ -8,7 +8,7 @@ from metaflow.exception import MetaflowNotFound
 
 from metaflowbot.message_templates.templates import DATEPARSER
 
-sResolvedRun = namedtuple('ResolvedRun',
+ResolvedRun = namedtuple('ResolvedRun',
                          ['id',
                           'flow',
                           'who',
