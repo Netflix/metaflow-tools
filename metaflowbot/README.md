@@ -10,17 +10,17 @@ Thorough Documentation is present in the [Documentation folder](./Docs)
 
 - `@flowey inspect` | `@flowey how to inspect` : How to inspect
 
-- `@flowey inspect run HelloFlow` : Inspect `Run`s of a particular `Flow`
+- `@flowey inspect HelloFlow` : Inspect `Run`s of a particular `Flow`
 
-- `@flowey inspect run savin's HelloFlow`: Inspect `Run`s of a particular `Flow`
+- `@flowey inspect savin's HelloFlow`: Inspect `Run`s of a particular `Flow`
 
-- `@flowey inspect run savin's HelloFlow tagged some_tag` : Inspect `Run`s of a particular `Flow`
+- `@flowey inspect savin's HelloFlow tagged some_tag` : Inspect `Run`s of a particular `Flow`
 
-- `@flowey inspect run HelloFlow/12` : Inspect an individual `Run` instance
+- `@flowey inspect HelloFlow/12` : Inspect an individual `Run` instance
 
-- `@flowey inspect run the latest run of HelloFlow` : Inspect an individual `Run` instance
+- `@flowey inspect the latest run of HelloFlow` : Inspect an individual `Run` instance
 
-- `@flowey inspect run dberg's latest run of HelloFlow` : Inspect an individual `Run` instance
+- `@flowey inspect dberg's latest run of HelloFlow` : Inspect an individual `Run` instance
 
 
 ## Metaflow Bot UX (How Will the bot Behave)

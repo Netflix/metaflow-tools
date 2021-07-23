@@ -8,17 +8,11 @@ from metaflow.exception import MetaflowNotFound
 
 from metaflowbot.message_templates.templates import DATEPARSER
 
-ResolvedRun = namedtuple('ResolvedRun',
+sResolvedRun = namedtuple('ResolvedRun',
                          ['id',
                           'flow',
                           'who',
-                          'when',
-                          'finished',
-                          'successful',
-                          'errored',
-                          'running',
-                          'running_time',
-                          'tags'])
+                          'when'])
 
 ResolvedStep = namedtuple('ResolvedStep',[
     'num_tasks',
@@ -120,7 +114,7 @@ class RunResolver(object):
     def __init__(self, command):
         self.command = command
 
-    def resolve(self, msg, max_runs=3):
+    def resolve(self, msg, max_runs=5):
         match = None
         if msg.startswith(self.command):
             msg = msg[len(self.command):].strip()
@@ -135,19 +129,34 @@ class RunResolver(object):
         else:
             raise RunSyntaxError(self.command)
 
+    def format_runs(self, runs, run_filter):
+        msg = ["I found these runs:"]
+        example = None
+        for run in runs:
+            exclude = run_filter(run)
+            if not exclude and not example:
+                example = run.id
+            msg.append(" - {x}`{run.id}`{x} _by {run.who}, {when}_ {reason}"\
+                       .format(run=run,
+                               when=timeago.format(DATEPARSER(run.when),
+                                                   now=datetime.utcnow()),
+                               x='~' if exclude else '',
+                               reason='(%s)' % exclude if exclude else ''))
+        if example:
+            msg.append("Choose one of the run IDs above by writing e.g. "\
+                       "`%s %s`" % (self.command, example))
+        else:
+            msg.append("It seems none of these runs were eligible. Try "\
+                       "another query (try `how to %s` for ideas)" %\
+                       self.command)
+        return '\n'.join(msg)
+
     def _query(self, query, max_runs):
         def _resolved_run(run):
-            flow_running = run.finished_at is None
             return ResolvedRun(id=run.pathspec,
-                                tags=run.tags,
                                who=find_user(run),
-                               flow= run.pathspec.split('/')[0],
-                               when=run.created_at,
-                               running_time=running_time(run),
-                                finished = run.finished,
-                                successful = run.successful,
-                                errored= not flow_running and not run.successful,
-                                running = flow_running)
+                               flow=run.pathspec.split('/')[0],
+                               when=run.created_at)
 
         try:
             namespace(None)

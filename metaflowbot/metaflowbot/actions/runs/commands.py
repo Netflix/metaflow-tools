@@ -45,8 +45,8 @@ def inspect_run(ctx, runspec=None, howto=False):
                 obj.reply("Ok, inspecting *%s*." % (runs[0].id))
                 ctx.invoke(inspect, run_id=runs[0].id)
             else:
-                blocks = RunResponse().get_slack_message(runs)
-                obj.reply("inspect_run Response",blocks=blocks)
+                reply = resolver.format_runs(runs, lambda _: None)
+                obj.reply(reply)
         except RunResolverException as ex:
             obj.reply(str(ex))
         except RunNotFound as ex:
@@ -120,29 +120,22 @@ def reply_inspect(obj, run_id):
         return sects
 
     def make_resolved_run(run:Run,total_steps = 0,max_steps=SLACK_MAX_BLOCKS):
-        flow_running = run.finished_at is None
         resolved_run = ResolvedRun(id=run.pathspec,
-                            tags=run.tags,
-                            running_time=running_time(run),
                             who=find_user(run),
                             flow= run.pathspec.split('/')[0],
-                            when=run.created_at,
-                            finished = run.finished,
-                            successful = run.successful,
-                            errored= not flow_running and not run.successful,
-                            running = flow_running)
+                            when=run.created_at)
         ago = timeago.format(DATEPARSER(resolved_run.when), now=datetime.utcnow())
         head = ['Run *%s* was started %s by _%s_.' % (resolved_run.id, ago, resolved_run.who),
                 run_status(run),
-                'Tags: %s' % ', '.join('`%s`' % tag for tag in resolved_run.tags),
+                'Tags: %s' % ', '.join('`%s`' % tag for tag in run.tags),
                 'Steps:' if total_steps <= max_steps else f"Showing {max_steps}/{total_steps} Steps:"]
         return '\n'.join(head)
     namespace(None)
     run = Run(run_id)
     steps = list(run)
-    resolved_run = make_resolved_run(run,total_steps=len(steps))
+    resolved_run_info = make_resolved_run(run,total_steps=len(steps))
     attachments = step_resolver(steps)
-    obj.reply(resolved_run,\
+    obj.reply(resolved_run_info,\
             attachments=attachments)
 
 
