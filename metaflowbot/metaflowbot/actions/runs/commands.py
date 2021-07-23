@@ -16,11 +16,9 @@ from metaflowbot.message_templates.templates import (DATEPARSER,
                                                      SLACK_MAX_BLOCKS)
 from metaflowbot.state import MFBState
 
-from .response_templates import (InspectHelp, InspectRunResponse, RunResponse,
-                                 make_help)
-from .run_resolver import (ResolvedRun, ResolvedStep, RunNotFound, RunResolver,
-                           RunResolverException, find_origin_id, find_user,
-                           running_time, step_runtime)
+from .run_resolver import (ResolvedRun, RunNotFound, RunResolver,
+                           RunResolverException, datetime_response_parsing,
+                           find_user, step_runtime)
 
 
 @action.command(help="Set a new run to be inspected")
@@ -78,8 +76,8 @@ def inspect(obj, run_id=None, howto=False):
 def run_status(run):
     if run.finished:
         if run.successful:
-            mins = (DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)).total_seconds() / 60
-            return "It ran for %d minutes and finished successfully." % mins
+            mins = datetime_response_parsing((DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)).total_seconds())
+            return "It ran for %s and finished successfully." % mins
         else:
             return "It did not finish successfully."
     else:

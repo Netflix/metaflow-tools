@@ -1,3 +1,4 @@
+import math
 import re
 from collections import namedtuple
 from datetime import datetime
@@ -92,6 +93,20 @@ def running_time(run):
         pass
     return None
 
+def datetime_response_parsing(secs):
+    if secs < 60:
+        return '%d seconds' % secs
+    elif secs < (60*60): # If less than one hour
+        return '%d minutes' % (secs / 60)
+    elif secs < (24*60*60): # If less than one day
+        num_hours = math.floor(secs/(60*60))
+        num_mins = (secs % (60*60))/60
+        return '%d hours and %d minutes' % (num_hours,num_mins)
+    else: # More than a day
+        num_days = math.floor(secs/(24*60*60))
+        num_hours = (secs % (24*60*60))/(60*60)
+        return '%d days and %d hours' % (num_days,num_hours)
+
 def step_runtime(tasks):
     # Code dies here at times because
     # t.finished_at is somehow linked to S3
@@ -101,10 +116,7 @@ def step_runtime(tasks):
             end = [DATEPARSER(t.finished_at) for t in tasks if t.finished_at is not None]
             if all(end) and len(end) >0 :
                 secs = (max(end) - DATEPARSER(tasks[-1].created_at)).total_seconds()
-                if secs < 60:
-                    return '%ds' % secs
-                else:
-                    return '%dmin' % (secs / 60)
+                return datetime_response_parsing(secs)
         except:
             pass
     return '?'

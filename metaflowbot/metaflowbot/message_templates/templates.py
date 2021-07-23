@@ -11,20 +11,6 @@ from ..version import __version__
 DATEPARSER = lambda date,format="%Y-%m-%dT%H:%M:%SZ": datetime.strptime(date,format)
 DEFAULT_ERROR_MESSAGE = ':skull_and_crossbones: Oops something went wrong'
 SLACK_MAX_BLOCKS = 50
-
-class HEADINGS(Enum):
-    NO_FLOWS = "No Flows Found :meow_dead:"
-    NO_RUNS = "No Runs Matched :meow_dead:"
-
-class RESPONSES(Enum):
-    NO_FLOW_IN_NAMESPACE  = f"I couldn't find any flows on a Global namespace."\
-                            "If you are new to Metaflow please have a look at the docs"\
-                            ": https://docs.metaflow.org/"
-    WAITING = f'Alright, Just a minute I am resolving your query.'
-
-    USER_NOT_PRESENT = ":meow_thinkingcool: It seems the User you may have been "\
-                        "looking for is not present in the Metadata service. Maybe try a different "\
-                        "user ?"
 class HEADINGS(Enum):
     NO_FLOWS = "No Flows Found :meow_dead:"
     NO_RUNS = "No Runs Matched :meow_dead:"
