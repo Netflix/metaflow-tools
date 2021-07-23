@@ -10,8 +10,6 @@
   action:
     op: new-thread
 
-# Help fallback when no other 'how to's or helps match
-
 - name: Generic help fallback
   event_type: user_message
   message: help(.*)|how to(.*)

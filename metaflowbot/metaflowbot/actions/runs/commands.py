@@ -8,6 +8,7 @@ import timeago
 from metaflow import Run, namespace
 from metaflow.datastore.util.s3util import get_s3_client
 from metaflow.exception import MetaflowNotFound
+
 from metaflowbot.cli import action
 from metaflowbot.message_templates.templates import (DATEPARSER,
                                                      DEFAULT_ERROR_MESSAGE,
@@ -30,9 +31,9 @@ from .run_resolver import (ResolvedRun, ResolvedStep, RunNotFound, RunResolver,
 @click.pass_context
 def inspect_run(ctx, runspec=None, howto=False):
     obj = ctx.obj
-    resolver = RunResolver('inspect run')
+    resolver = RunResolver('inspect')
     if howto:
-        reply,blocks = InspectHelp(help_blocks=make_help('inspect run')).make_help()
+        reply,blocks = InspectHelp(help_blocks=make_help('inspect')).make_help()
         obj.reply(reply,blocks=blocks)
     else:
         try:
@@ -63,7 +64,7 @@ def inspect_run(ctx, runspec=None, howto=False):
 @click.pass_obj
 def inspect(obj, run_id=None, howto=False):
     if howto:
-        reply,blocks = InspectHelp(help_blocks=make_help('inspect run')).make_help()
+        reply,blocks = InspectHelp(help_blocks=make_help('inspect')).make_help()
         obj.reply(reply,blocks=blocks)
     else:
         try:
@@ -117,7 +118,7 @@ def reply_inspect(obj, run_id):
                         'title': 'Step: ' + step.id,
                         'fields': fields,
                         'color': color})
-        return sects,steps
+        return sects
 
     def make_resolved_run(run:Run,total_steps = 0,max_steps=SLACK_MAX_BLOCKS):
         flow_running = run.finished_at is None
@@ -139,7 +140,8 @@ def reply_inspect(obj, run_id):
         return '\n'.join(head)
     namespace(None)
     run = Run(run_id)
-    attachments,steps = step_resolver(list(run))
-
-    obj.reply(make_resolved_run(run,total_steps=len(steps)),\
+    steps = list(run)
+    resolved_run = make_resolved_run(run,total_steps=len(steps))
+    attachments = step_resolver(steps)
+    obj.reply(resolved_run,\
             attachments=attachments)
