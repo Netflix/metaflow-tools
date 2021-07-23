@@ -1,9 +1,9 @@
 import traceback
-from datetime import datetime
 from urllib.parse import urlparse
 
 import click
 import timeago
+
 from metaflowbot.cli import action
 from metaflowbot.state import MFBState
 
@@ -22,9 +22,13 @@ def random_joke():
 
 
 @action.command(help="Tell Me A Joke")
+@click.option('--create-thread/--no-create-thread',
+              help="Will create a new thread")
 @click.pass_context
-def joke(ctx):
+def joke(ctx,create_thread=False):
     obj = ctx.obj
+    if create_thread:
+        obj.publish_state(MFBState.message_new_thread(obj.thread))
     try:
         joke = random_joke()[0]
         setup = joke["setup"]
@@ -35,6 +39,7 @@ def joke(ctx):
             '''
         )
     except:
+        traceback.print_exc()
         obj.reply(
             f'''
             Sorry, I couldn't find a joke at the moment :meow_dead:

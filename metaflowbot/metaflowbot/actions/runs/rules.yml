@@ -37,3 +37,4 @@
   action:
     op: inspect
     howto: true
+    create-thread: true

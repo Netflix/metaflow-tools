@@ -56,11 +56,15 @@ def inspect_run(ctx, runspec=None, howto=False):
 @action.command(help="Inspect the current run or show help text")
 @click.option('--run-id',
               help="Run ID to inspect")
+@click.option('--create-thread/--no-create-thread',
+              help="Will create a new thread")
 @click.option('--howto/--no-howto',
               help="Only show help text")
 @click.pass_obj
-def inspect(obj, run_id=None, howto=False):
+def inspect(obj, run_id=None,create_thread=False, howto=False):
     resolver = RunResolver('inspect')
+    if create_thread:
+        obj.publish_state(MFBState.message_new_thread(obj.thread))
     if howto:
         obj.reply(howto_inspect_run(resolver))
     else:

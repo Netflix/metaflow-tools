@@ -3,3 +3,11 @@
   message: tell me a joke
   action:
     op: joke
+
+
+- name: Tell me a Joke
+  event_type: new_thread
+  message: tell me a joke
+  action:
+    op: joke
+    create-thread: true
