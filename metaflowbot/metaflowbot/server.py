@@ -270,10 +270,12 @@ class MFBServer(object):
         # Use the Parent server thread's environment variables.
         env.update({k:os.environ[k] for k in os.environ if k not in env})
         cmd = []
+        # We don't need app-token because only calling
+        # server needs an app token.
         cmd += [sys.executable,
                 '-m',
                 'metaflowbot',
-                '--slack-token',
+                '--slack-bot-token',
                 self.sc.token,
                 '--admin-thread',
                 '%s:%s' % (self.admin_chan, self.admin_thread),

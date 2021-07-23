@@ -32,7 +32,7 @@ The setup follows two parts.
 
 3. Run the BOT with metaflowbot as [root directory](../)
     ```sh
-    python -m metaflowbot --slack-token $(echo $SLACK_BOT_TOKEN) server --admin me@server.com --new-admin-thread
+    python -m metaflowbot --slack-bot-token $(echo $SLACK_BOT_TOKEN) --slack-app-token $(echo $SLACK_APP_TOKEN) server --admin me@server.com --new-admin-thread
     ```
 
 ## Running Via Docker Image

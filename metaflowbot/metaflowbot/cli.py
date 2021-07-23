@@ -28,8 +28,12 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
               is_flag=True,
               default=False,
               help="Debug mode: Print to stdout instead of sending to Slack")
-@click.option('--slack-token',
-              help="Token for the Slack API.")
+@click.option('--slack-bot-token',
+             envvar='SLACK_BOT_TOKEN',
+              help="Bot token to make web API calls to Slack.")
+@click.option('--slack-app-token',
+            envvar='SLACK_APP_TOKEN',
+              help="App token to make a socket connection to Slack.")
 @click.option('--admin-thread',
               help="Admin thread for actions (do not set manually)")
 @click.option('--reply-thread',
@@ -37,10 +41,11 @@ def logger(body='', system_msg=False, head='', bad=False, timestamp=True):
 @click.pass_obj
 def cli(obj,
         debug=False,
-        slack_token=None,
+        slack_bot_token=None,
+        slack_app_token=None,
         admin_thread=None,
         reply_thread=None):
-    obj.sc = MFBSlackClientV2(slack_token)
+    obj.sc = MFBSlackClientV2(slack_bot_token,slack_app_token=slack_app_token)
     if debug:
         obj.publish_state = lambda msg: logger(msg, head='[debug state] ')
         obj.reply = lambda msg: logger(msg, head='[debug reply] ')

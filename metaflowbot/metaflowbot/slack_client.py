@@ -121,11 +121,11 @@ class SlackSocketSubscriber(Thread):
 
     TODO : Ensure this thread runs without any kind of failure. Stress test the thread.
     """
-    def __init__(self,slack_token,message_event_queue:Queue) -> None:
+    def __init__(self,app_token,message_event_queue:Queue,) -> None:
+        assert app_token is not None
         super().__init__(daemon=True)
         self.message_event_queue = message_event_queue
-        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running.
-        self.slack_token = slack_token
+        self._app_token = app_token
 
     def run(self) -> None:
         """run
@@ -133,7 +133,7 @@ class SlackSocketSubscriber(Thread):
         """
         self.sc = SocketModeClient(
             # This app-level token will be used only for establishing a connection
-            app_token=os.environ.get("SLACK_APP_TOKEN"),  # xapp-A111-222-xyz
+            app_token=self._app_token,  # xapp-A111-222-xyz
         )
         # Bind the queue to ensure Message Paassig.
         subscriber_func = partial(process,self.message_event_queue)
@@ -143,9 +143,9 @@ class SlackSocketSubscriber(Thread):
         Event().wait()
 
 
-def create_slack_subscriber(slack_token:str):
+def create_slack_subscriber(app_token):
     message_event_queue = SlackMessageQueue()
-    socket_thread = SlackSocketSubscriber(slack_token,message_event_queue)
+    socket_thread = SlackSocketSubscriber(app_token,message_event_queue)
     socket_thread.start()
     return message_event_queue,socket_thread
 
@@ -164,10 +164,10 @@ class MFBSlackClientV2(object):
     `SocketModeClient` leverages a Message queue which gets the RTM events.
 
     """
-    def __init__(self,slack_token) -> None:
-        # plug in appropriate slack_sdk. Ensure `slack_token` is there.
-        # Todo : figure management for the `SLACK_APP_TOKEN` in the instantiation and code running.
+    def __init__(self,slack_token,slack_app_token=None) -> None:
+        assert slack_token is not None
         self.sc = WebClient(token=slack_token)  # xoxb-111-222-xyz
+        self._app_token = slack_app_token
         self.rtm_connected = False
         self._slack_token = slack_token
         self._last_rtm_events = 0
@@ -214,7 +214,7 @@ class MFBSlackClientV2(object):
     def _connect(self):
         # Instantiate event reader over here.
         if not self.rtm_connected:
-            self._rmt_feed_queue,self._socket_tread = create_slack_subscriber(self.token)
+            self._rmt_feed_queue,self._socket_tread = create_slack_subscriber(self._app_token)
             self.rtm_connected = True
         return self.rtm_connected
 
