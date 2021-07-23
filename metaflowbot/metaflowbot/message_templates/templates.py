@@ -123,7 +123,8 @@ class IntroMessage(Template):
                         {
                             "type": "mrkdwn",
                             "text": "Note that all discussions with me should happen in a thread. "\
-                                    f"You can open a new thread with me e.g. by saying {bot_name} hey on any channel."\
+                                    f"You can open a new thread with me e.g. by saying `{bot_name} hey` on any channel "\
+                                    f"or by direct messaging {bot_name} with `hey` or `hello`"
                                     "You can open multiple threads with me if you want to. "\
                                     "Each thread is an independent discussion."
                         }
