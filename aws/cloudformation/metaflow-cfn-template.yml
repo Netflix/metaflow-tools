@@ -69,6 +69,10 @@ Parameters:
     Default: 'aws'
     AllowedValues: ['aws', 'aws-us-gov']
     Description: 'IAM Partition (Select aws-us-gov for AWS GovCloud, otherwise leave as is)'
+  AdditionalWorkerPolicyArn:
+    Type: String
+    Default: ''
+    Description: 'Additional IAM Policy ARN to attach to nodes executing Metaflow step code.'
 
 Mappings:
   ServiceInfo:
@@ -98,6 +102,7 @@ Conditions:
   EnableFargateOnBatch: !Equals [ !Ref BatchType, 'fargate']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
+  EnableAddtionalWorkerPolicy: !Not [ !Equals [ !Ref AdditionalWorkerPolicyArn, ''] ]
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -996,6 +1001,11 @@ Resources:
           Action:
             - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - !If
+          - EnableAddtionalWorkerPolicy
+          - !Ref 'AdditionalWorkerPolicyArn'
+          - !Ref AWS::NoValue
       Policies:
         - PolicyName: CustomS3ListBatch
           PolicyDocument:
