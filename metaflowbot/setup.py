@@ -34,6 +34,6 @@ setuptools.setup(
     install_requires=get_required(),
     python_requires='>=3.6',
     entry_points={
-        'console_scripts': ['metaflowbot=metaflowbot.__main__'],
-    },
+        'console_scripts': ['metaflowbot=metaflowbot.__main__:main'],
+    }
 )

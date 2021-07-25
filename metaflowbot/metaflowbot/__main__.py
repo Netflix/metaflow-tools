@@ -19,12 +19,16 @@ class CliState(object):
         self.thread = None
         self.sc = None
 
-try:
-    cli.cli(auto_envvar_prefix='MFB',
-            obj=CliState())
-except cli.MFBException as ex:
-    click.secho(ex.headline, fg='white', bold=True)
-    if ex.traceback:
-        traceback.print_exc()
-    else:
-        click.secho(ex.msg, fg='red', bold=True)
+def main():
+    try:
+        cli.cli(auto_envvar_prefix='MFB',
+                obj=CliState())
+    except cli.MFBException as ex:
+        click.secho(ex.headline, fg='white', bold=True)
+        if ex.traceback:
+            traceback.print_exc()
+        else:
+            click.secho(ex.msg, fg='red', bold=True)
+
+if __name__ == '__main__':
+    main()

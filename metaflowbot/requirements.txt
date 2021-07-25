@@ -1,6 +1,5 @@
 metaflow
 timeago
 pyyaml
-pandas
 slack_sdk==3.7.0
 requests
