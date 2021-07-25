@@ -1,0 +1,4 @@
+include README.md
+include Docs/**
+include metaflowbot/actions/**/*.yml
+include manifest.yml
