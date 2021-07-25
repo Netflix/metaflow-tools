@@ -119,3 +119,23 @@ class IntroMessage(Template):
         ]
         # INTO_MESSAGE_BLOCKS.extend(self.make_context_block())
         return intro_message,INTO_MESSAGE_BLOCKS
+
+def error_message(traceback_err,message = DEFAULT_ERROR_MESSAGE):
+    return {
+	"blocks": [
+        {
+            "type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f"{message}"
+			}
+        },
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f"\n```{traceback_err}```"
+			}
+		}
+	]
+}

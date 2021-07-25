@@ -5,6 +5,7 @@ import click
 import timeago
 
 from metaflowbot.cli import action
+from metaflowbot.message_templates.templates import error_message
 from metaflowbot.state import MFBState
 
 MAX_ARTIFACT_SIZE = 1000
@@ -40,8 +41,6 @@ def joke(ctx,create_thread=False):
         )
     except:
         traceback.print_exc()
-        obj.reply(
-            f'''
-            Sorry, I couldn't find a joke at the moment :meow_dead:
-            '''
-        )
+        my_traceback = traceback.format_exc()
+        err_msg = "Sorry, I couldn't find a joke at the moment :meow_dead:"
+        obj.reply(err_msg,**error_message(my_traceback,message=err_msg))

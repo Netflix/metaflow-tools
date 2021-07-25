@@ -13,7 +13,8 @@ from metaflowbot.cli import action
 from metaflowbot.message_templates.templates import (DATEPARSER,
                                                      DEFAULT_ERROR_MESSAGE,
                                                      HEADINGS,
-                                                     SLACK_MAX_BLOCKS)
+                                                     SLACK_MAX_BLOCKS,
+                                                     error_message)
 from metaflowbot.state import MFBState
 
 from .run_resolver import (ResolvedRun, RunNotFound, RunResolver,
@@ -51,7 +52,8 @@ def inspect_run(ctx, runspec=None, howto=False):
             obj.reply(str(ex))
         except Exception as e:
             traceback.print_exc()
-            obj.reply(DEFAULT_ERROR_MESSAGE)
+            my_traceback = traceback.format_exc()
+            obj.reply(DEFAULT_ERROR_MESSAGE,**error_message(my_traceback))
 
 @action.command(help="Inspect the current run or show help text")
 @click.option('--run-id',
@@ -74,7 +76,8 @@ def inspect(obj, run_id=None,create_thread=False, howto=False):
             obj.reply(HEADINGS.NO_RUNS.value)
         except:
             traceback.print_exc()
-            obj.reply(DEFAULT_ERROR_MESSAGE)
+            my_traceback = traceback.format_exc()
+            obj.reply(DEFAULT_ERROR_MESSAGE,**error_message(my_traceback))
 
 
 def run_status(run):
