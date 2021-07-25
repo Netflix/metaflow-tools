@@ -1,5 +1,5 @@
 # Metaflow bot docker file : Temp workaround like to to use heroku github action
-FROM python:3.7
+FROM python:3.7.2
 ADD metaflowbot /metaflowbot
 RUN pip3 install /metaflowbot/.
 RUN pip3 install /metaflowbot/extensions/jokes-command/.
