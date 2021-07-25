@@ -4,6 +4,7 @@ from datetime import datetime
 
 import click
 
+from .action_loader import SUPPORTED_ACTIONS
 from .exceptions import MFBException
 from .rules import MFBRules
 from .server import MFBServer
@@ -99,7 +100,10 @@ def server(obj,
 
     if os.getuid() != 0:
         action_user = None
-
+    spaces = '\n\t\t\t'
+    modules = spaces.join(SUPPORTED_ACTIONS.keys())
+    modules_message = f"Discovered the following actions :{spaces}{modules}"
+    log(modules_message)
     rules_obj = MFBRules()
     log("Loaded %d rules" % (len(rules_obj)))
 

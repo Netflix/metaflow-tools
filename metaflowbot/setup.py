@@ -28,8 +28,6 @@ setuptools.setup(
     license='Apache License 2.0',
     author='Machine Learning Infrastructure Team at Netflix',
     include_package_data=True,
-    package_data={'mypkg': ['../*.txt']},
-    author_email='valaygaurang@gmail.com',
     url='https://github.com/Netflix/metaflow-tools',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',

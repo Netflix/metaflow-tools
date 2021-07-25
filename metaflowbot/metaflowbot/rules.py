@@ -2,7 +2,7 @@ import re
 
 import yaml
 
-from . import SUPPORTED_RULES
+from .action_loader import SUPPORTED_RULES
 from .exceptions import MFBRulesParseException
 
 
