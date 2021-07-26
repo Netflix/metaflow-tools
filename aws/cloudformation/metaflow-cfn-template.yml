@@ -51,9 +51,9 @@ Parameters:
     Description: 'Enable custom role with restricted permissions?'
   APIBasicAuth:
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues: ['false', 'true']
-    Description: 'Enable basic auth for API Gateway? (requires key export)'
+    Description: 'Enable basic auth for API Gateway? (requires you to export the API key from API Gateway console)'
   EnableSagemaker:
     Type: String
     Default: 'true'
