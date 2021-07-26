@@ -72,7 +72,7 @@ Parameters:
   AdditionalWorkerPolicyArn:
     Type: String
     Default: ''
-    Description: 'Additional IAM Policy ARN to attach to nodes executing Metaflow step code.'
+    Description: 'Additional IAM Policy ARN to attach to Batch Compute Environment.'
 
 Mappings:
   ServiceInfo:
