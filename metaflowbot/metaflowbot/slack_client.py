@@ -7,7 +7,7 @@ from functools import partial
 from itertools import islice
 from queue import Empty, Queue
 from threading import Event, Thread
-from typing import Lists
+from typing import List
 
 from slack_sdk import WebClient
 from slack_sdk.socket_mode import SocketModeClient
