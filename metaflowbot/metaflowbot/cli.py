@@ -50,8 +50,6 @@ def cli(obj,
     if debug:
         obj.publish_state = lambda msg: logger(msg, head='[debug state] ')
         obj.reply = lambda msg: logger(msg, head='[debug reply] ')
-        obj.upload = lambda path:\
-            logger('upload %s' % path, head='[debug upload] ')
     else:
         if admin_thread:
             obj.publish_state =\
@@ -60,8 +58,6 @@ def cli(obj,
         if reply_thread:
             obj.thread = reply_thread
             channel, thread_ts = reply_thread.split(':')
-            obj.upload =\
-                lambda path: obj.sc.upload_file(path, channel, thread_ts)
             obj.reply =\
                 lambda msg, attachments=None,blocks=None: obj.sc.post_message(msg,
                                                                   channel,

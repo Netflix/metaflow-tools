@@ -7,9 +7,8 @@ from functools import partial
 from itertools import islice
 from queue import Empty, Queue
 from threading import Event, Thread
-from typing import List, Optional, Union
+from typing import Lists
 
-import requests
 from slack_sdk import WebClient
 from slack_sdk.socket_mode import SocketModeClient
 from slack_sdk.socket_mode.request import SocketModeRequest
@@ -20,11 +19,6 @@ from .exceptions import MFBException
 NUM_RETRIES = 3
 MIN_RTM_EVENTS_INTERVAL = 1
 
-# Slack file permalinks look like
-# https://netflix.slack.com/files/U6U5ZJGE4/FBGAXGH71/foobar
-# We are interested in the file ID, starting with F. Slack
-# wraps links to <https://foobar>, we ignore the wrapping.
-PERMALINK_FILE_ID = re.compile('<?https://.*?/(F.*?)/.*')
 
 class MFBInvalidPermalink(MFBException):
     headlink = 'Invalid Slack permalink'
@@ -200,16 +194,6 @@ class MFBSlackClientV2(object):
         return self.sc.chat_postMessage(
             **args
         )['ts']
-
-
-    def upload_file(self, path, channel, thread=None):
-        # permission : files.upload
-        args = {'channels': channel}
-        if thread:
-            args['thread_ts'] = thread
-
-        args['file'] = open(path, 'rb')
-        self.sc.files_upload(**args)
 
     def _connect(self):
         # Instantiate event reader over here.
