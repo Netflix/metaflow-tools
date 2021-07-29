@@ -1,6 +1,5 @@
-
 class MFBException(Exception):
-    headline = 'MetaflowBot error'
+    headline = "MetaflowBot error"
     traceback = False
 
     def __init__(self, msg):

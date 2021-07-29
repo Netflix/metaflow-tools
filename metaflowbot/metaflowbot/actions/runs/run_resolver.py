@@ -9,19 +9,18 @@ from metaflow.exception import MetaflowNotFound
 
 from metaflowbot.message_templates.templates import DATEPARSER
 
-ResolvedRun = namedtuple('ResolvedRun',
-                         ['id',
-                          'flow',
-                          'who',
-                          'when'])
+ResolvedRun = namedtuple("ResolvedRun", ["id", "flow", "who", "when"])
 
-ResolvedStep = namedtuple('ResolvedStep', [
-    'num_tasks',
-    'name',
-    'started_on',
-    'finished_at',
-    'step_runtime',
-])
+ResolvedStep = namedtuple(
+    "ResolvedStep",
+    [
+        "num_tasks",
+        "name",
+        "started_on",
+        "finished_at",
+        "step_runtime",
+    ],
+)
 
 
 class RunResolverException(Exception):
@@ -42,14 +41,18 @@ class RunSyntaxError(RunResolverException):
         self.command = command
 
     def __str__(self):
-        return "Hmm, I am not sure what you mean. Type "\
-               "`how to %s` for help." % self.command
+        return (
+            "Hmm, I am not sure what you mean. Type "
+            "`how to %s` for help." % self.command
+        )
 
 
 class FlowNotFound(RunResolverException):
     def __str__(self):
-        return "Flow `%s` not found. Note that flow names are "\
-               "case-sensitive." % self.flow
+        return (
+            "Flow `%s` not found. Note that flow names are "
+            "case-sensitive." % self.flow
+        )
 
 
 class NoRuns(RunResolverException):
@@ -58,16 +61,18 @@ class NoRuns(RunResolverException):
         self.command = command
 
     def __str__(self):
-        return "I couldn't find any runs with the given spec. "\
-               "You can see a list of runs if you specify just the "\
-               "flow name, `%s %s`." % (self.command, self.flow)
+        return (
+            "I couldn't find any runs with the given spec. "
+            "You can see a list of runs if you specify just the "
+            "flow name, `%s %s`." % (self.command, self.flow)
+        )
 
 
 STYLES = [  # [Run/ID]
     "(?P<flow>[a-z0-9_]+)/(?P<runid>[a-z0-9_\-]+)",
     # (someone's / the) (latest run of) [flow], (tagged tag)
-    "((?P<user>[a-z]+)'s?|the)? ?(?P<latest>latest run of )?"\
-    "(?P<flow>[a-z0-9_]+),?( tagged (?P<tag>.+))?"
+    "((?P<user>[a-z]+)'s?|the)? ?(?P<latest>latest run of )?"
+    "(?P<flow>[a-z0-9_]+),?( tagged (?P<tag>.+))?",
 ]
 
 PARSER = [re.compile(x, re.IGNORECASE) for x in STYLES]
@@ -81,8 +86,8 @@ def find_origin_id(run):
     # TODO : Check if this can be done more efficiently.
     # Listinng all stepss in one go can be troublesome.
     for step in list(run.steps()):
-        origin_run_id = step.task.metadata_dict.get('origin-run-id')
-        if origin_run_id != 'None' and origin_run_id is not None:
+        origin_run_id = step.task.metadata_dict.get("origin-run-id")
+        if origin_run_id != "None" and origin_run_id is not None:
             origin_run_id = f"{run.pathspec.split('/')[0]}/{origin_run_id}"
             break
         else:
@@ -95,8 +100,9 @@ def running_time(run):
     try:
         if run.finished:
             if run.successful:
-                mins = (DATEPARSER(run.finished_at) -
-                        DATEPARSER(run.created_at)).total_seconds() / 60
+                mins = (
+                    DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)
+                ).total_seconds() / 60
                 return mins
     except:
         pass
@@ -105,17 +111,17 @@ def running_time(run):
 
 def datetime_response_parsing(secs):
     if secs < 60:
-        return '%d seconds' % secs
-    elif secs < (60*60):  # If less than one hour
-        return '%d minutes' % (secs / 60)
-    elif secs < (24*60*60):  # If less than one day
-        num_hours = math.floor(secs/(60*60))
-        num_mins = (secs % (60*60))/60
-        return '%d hours and %d minutes' % (num_hours, num_mins)
+        return "%d seconds" % secs
+    elif secs < (60 * 60):  # If less than one hour
+        return "%d minutes" % (secs / 60)
+    elif secs < (24 * 60 * 60):  # If less than one day
+        num_hours = math.floor(secs / (60 * 60))
+        num_mins = (secs % (60 * 60)) / 60
+        return "%d hours and %d minutes" % (num_hours, num_mins)
     else:  # More than a day
-        num_days = math.floor(secs/(24*60*60))
-        num_hours = (secs % (24*60*60))/(60*60)
-        return '%d days and %d hours' % (num_days, num_hours)
+        num_days = math.floor(secs / (24 * 60 * 60))
+        num_hours = (secs % (24 * 60 * 60)) / (60 * 60)
+        return "%d days and %d hours" % (num_days, num_hours)
 
 
 def step_runtime(tasks):
@@ -124,26 +130,25 @@ def step_runtime(tasks):
     # More info at : https://github.com/Netflix/metaflow/blob/48e37bea3ea4e83ddab8227869bbe56b52d9957d/metaflow/client/core.py#L956
     if tasks:
         try:
-            end = [DATEPARSER(t.finished_at)
-                   for t in tasks if t.finished_at is not None]
+            end = [
+                DATEPARSER(t.finished_at) for t in tasks if t.finished_at is not None
+            ]
             if all(end) and len(end) > 0:
-                secs = (
-                    max(end) - DATEPARSER(tasks[-1].created_at)).total_seconds()
+                secs = (max(end) - DATEPARSER(tasks[-1].created_at)).total_seconds()
                 return datetime_response_parsing(secs)
         except:
             pass
-    return '?'
+    return "?"
 
 
 class RunResolver(object):
-
     def __init__(self, command):
         self.command = command
 
     def resolve(self, msg, max_runs=5):
         match = None
         if msg.startswith(self.command):
-            msg = msg[len(self.command):].strip()
+            msg = msg[len(self.command) :].strip()
             match = list(filter(None, [p.match(msg) for p in PARSER]))
         if match:
             query = match[0].groupdict()
@@ -151,7 +156,7 @@ class RunResolver(object):
             if runs:
                 return runs
             else:
-                raise NoRuns(query['flow'], self.command)
+                raise NoRuns(query["flow"], self.command)
         else:
             raise RunSyntaxError(self.command)
 
@@ -162,35 +167,42 @@ class RunResolver(object):
             exclude = run_filter(run)
             if not exclude and not example:
                 example = run.id
-            msg.append(" - {x}`{run.id}`{x} _by {run.who}, {when}_ {reason}"
-                       .format(run=run,
-                               when=timeago.format(DATEPARSER(run.when),
-                                                   now=datetime.utcnow()),
-                               x='~' if exclude else '',
-                               reason='(%s)' % exclude if exclude else ''))
+            msg.append(
+                " - {x}`{run.id}`{x} _by {run.who}, {when}_ {reason}".format(
+                    run=run,
+                    when=timeago.format(DATEPARSER(run.when), now=datetime.utcnow()),
+                    x="~" if exclude else "",
+                    reason="(%s)" % exclude if exclude else "",
+                )
+            )
         if example:
-            msg.append("Choose one of the run IDs above by writing e.g. "
-                       "`%s %s`" % (self.command, example))
+            msg.append(
+                "Choose one of the run IDs above by writing e.g. "
+                "`%s %s`" % (self.command, example)
+            )
         else:
-            msg.append("It seems none of these runs were eligible. Try "
-                       "another query (try `how to %s` for ideas)" %
-                       self.command)
-        return '\n'.join(msg)
+            msg.append(
+                "It seems none of these runs were eligible. Try "
+                "another query (try `how to %s` for ideas)" % self.command
+            )
+        return "\n".join(msg)
 
     def _query(self, query, max_runs):
         def _resolved_run(run):
-            return ResolvedRun(id=run.pathspec,
-                               who=find_user(run),
-                               flow=run.pathspec.split('/')[0],
-                               when=run.created_at)
+            return ResolvedRun(
+                id=run.pathspec,
+                who=find_user(run),
+                flow=run.pathspec.split("/")[0],
+                when=run.created_at,
+            )
 
         try:
             namespace(None)
-            flow = Flow(query['flow'])
+            flow = Flow(query["flow"])
         except MetaflowNotFound:
-            raise FlowNotFound(query['flow'])
+            raise FlowNotFound(query["flow"])
 
-        runid = query.get('runid')
+        runid = query.get("runid")
         if runid:
             try:
                 runs = [flow[runid]]
@@ -198,38 +210,40 @@ class RunResolver(object):
                 raise RunNotFound(flow, runid)
         else:
             tags = []
-            if query.get('tag'):
-                tags.append(query['tag'])
-            if query.get('user'):
-                tags.append('user:' + query['user'])
+            if query.get("tag"):
+                tags.append(query["tag"])
+            if query.get("user"):
+                tags.append("user:" + query["user"])
             runs = list(flow.runs(*tags))
-            if query.get('latest'):
+            if query.get("latest"):
                 runs = runs[:1]
         return map(_resolved_run, runs[:max_runs])
 
     def howto(self):
-        return\
-            "There are a number of ways to refer to an existing run:\n"\
-            " - Use an existing run ID: `{cmd} HelloFlow/12`.\n"\
-            " - Use a flow name: `{cmd} HelloFlow`.\n"\
-            " - Use a flow name with a user: `{cmd} dberg's HelloFlow`.\n"\
-            " - Use the latest run of a user: `{cmd} dberg's latest run of HelloFlow`.\n"\
-            " - Use the latest run by anyone: `{cmd} the latest run of HelloFlow`.\n"\
-            "You can filter by a tag by appending `tagged some_tag` in any of the "\
-            "expressions above except the first one. If there are multiple "\
-            "eligible runs, I will show you a list of run IDs to choose from."\
-            .format(cmd=self.command)
+        return (
+            "There are a number of ways to refer to an existing run:\n"
+            " - Use an existing run ID: `{cmd} HelloFlow/12`.\n"
+            " - Use a flow name: `{cmd} HelloFlow`.\n"
+            " - Use a flow name with a user: `{cmd} dberg's HelloFlow`.\n"
+            " - Use the latest run of a user: `{cmd} dberg's latest run of HelloFlow`.\n"
+            " - Use the latest run by anyone: `{cmd} the latest run of HelloFlow`.\n"
+            "You can filter by a tag by appending `tagged some_tag` in any of the "
+            "expressions above except the first one. If there are multiple "
+            "eligible runs, I will show you a list of run IDs to choose from.".format(
+                cmd=self.command
+            )
+        )
 
 
 def find_user(run):
-    usrlst = [tag for tag in run.tags if tag.startswith('user:')]
+    usrlst = [tag for tag in run.tags if tag.startswith("user:")]
     if usrlst:
         return usrlst[0][5:]
     else:
-        return 'unknown'
+        return "unknown"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
-    print('\n'.join(map(str, RunResolver(
-        'use code from').resolve(sys.argv[1]))))
+
+    print("\n".join(map(str, RunResolver("use code from").resolve(sys.argv[1]))))

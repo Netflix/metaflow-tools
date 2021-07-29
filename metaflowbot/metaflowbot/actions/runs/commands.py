@@ -23,14 +23,12 @@ from .run_resolver import (ResolvedRun, RunNotFound, RunResolver,
 
 
 @action.command(help="Set a new run to be inspected")
-@click.option('--runspec',
-              help="A query to find a run to inspect")
-@click.option('--howto/--no-howto',
-              help="Only show help text")
+@click.option("--runspec", help="A query to find a run to inspect")
+@click.option("--howto/--no-howto", help="Only show help text")
 @click.pass_context
 def inspect_run(ctx, runspec=None, howto=False):
     obj = ctx.obj
-    resolver = RunResolver('inspect')
+    resolver = RunResolver("inspect")
     if howto:
         obj.reply(howto_inspect_run(resolver))
     else:
@@ -38,7 +36,7 @@ def inspect_run(ctx, runspec=None, howto=False):
             obj.reply("Searching runs. Just a minute...")
             runs = resolver.resolve(runspec)
             if len(runs) == 1:
-                attrs = {'inspect.run_id': runs[0].id}
+                attrs = {"inspect.run_id": runs[0].id}
                 state = MFBState.message_set_attributes(obj.thread, attrs)
                 obj.publish_state(state)
                 obj.reply("Ok, inspecting *%s*." % (runs[0].id))
@@ -57,15 +55,12 @@ def inspect_run(ctx, runspec=None, howto=False):
 
 
 @action.command(help="Inspect the current run or show help text")
-@click.option('--run-id',
-              help="Run ID to inspect")
-@click.option('--create-thread/--no-create-thread',
-              help="Will create a new thread")
-@click.option('--howto/--no-howto',
-              help="Only show help text")
+@click.option("--run-id", help="Run ID to inspect")
+@click.option("--create-thread/--no-create-thread", help="Will create a new thread")
+@click.option("--howto/--no-howto", help="Only show help text")
 @click.pass_obj
 def inspect(obj, run_id=None, create_thread=False, howto=False):
-    resolver = RunResolver('inspect')
+    resolver = RunResolver("inspect")
     if create_thread:
         obj.publish_state(MFBState.message_new_thread(obj.thread))
     if howto:
@@ -85,7 +80,10 @@ def run_status(run):
     if run.finished:
         if run.successful:
             mins = datetime_response_parsing(
-                (DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)).total_seconds())
+                (
+                    DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)
+                ).total_seconds()
+            )
             return "It ran for %s and finished successfully." % mins
         else:
             return "It did not finish successfully."
@@ -104,50 +102,57 @@ def reply_inspect(obj, run_id):
                 break
             tasks = list(step)
             if all(task.successful for task in tasks):
-                color = 'good'
-                status = 'All tasks finished successfully.'
+                color = "good"
+                status = "All tasks finished successfully."
             else:
-                color = 'warning'
-                status = 'Some tasks failed or are still running.'
+                color = "warning"
+                status = "Some tasks failed or are still running."
 
-            fields = [{'title': 'Status',
-                       'value': status,
-                       'short': False},
-                      {'title': 'Runtime',
-                       'value': step_runtime(tasks),
-                       'short': True},
-                      {'title': 'Tasks Started',
-                       'value': len(tasks),
-                       'short': True}]
-            sects.append({'fallback': 'step %s' % step.id,
-                          'title': 'Step: ' + step.id,
-                          'fields': fields,
-                          'color': color})
+            fields = [
+                {"title": "Status", "value": status, "short": False},
+                {"title": "Runtime", "value": step_runtime(tasks), "short": True},
+                {"title": "Tasks Started", "value": len(tasks), "short": True},
+            ]
+            sects.append(
+                {
+                    "fallback": "step %s" % step.id,
+                    "title": "Step: " + step.id,
+                    "fields": fields,
+                    "color": color,
+                }
+            )
         return sects
 
     def make_resolved_run(run: Run, total_steps=0, max_steps=SLACK_MAX_BLOCKS):
-        resolved_run = ResolvedRun(id=run.pathspec,
-                                   who=find_user(run),
-                                   flow=run.pathspec.split('/')[0],
-                                   when=run.created_at)
-        ago = timeago.format(DATEPARSER(resolved_run.when),
-                             now=datetime.utcnow())
-        head = ['Run *%s* was started %s by _%s_.' % (resolved_run.id, ago, resolved_run.who),
-                run_status(run),
-                'Tags: %s' % ', '.join('`%s`' % tag for tag in run.tags),
-                'Steps:' if total_steps <= max_steps else f"Showing {max_steps}/{total_steps} Steps:"]
-        return '\n'.join(head)
+        resolved_run = ResolvedRun(
+            id=run.pathspec,
+            who=find_user(run),
+            flow=run.pathspec.split("/")[0],
+            when=run.created_at,
+        )
+        ago = timeago.format(DATEPARSER(resolved_run.when), now=datetime.utcnow())
+        head = [
+            "Run *%s* was started %s by _%s_."
+            % (resolved_run.id, ago, resolved_run.who),
+            run_status(run),
+            "Tags: %s" % ", ".join("`%s`" % tag for tag in run.tags),
+            "Steps:"
+            if total_steps <= max_steps
+            else f"Showing {max_steps}/{total_steps} Steps:",
+        ]
+        return "\n".join(head)
+
     namespace(None)
     run = Run(run_id)
     steps = list(run)
     resolved_run_info = make_resolved_run(run, total_steps=len(steps))
     attachments = step_resolver(steps)
-    obj.reply(resolved_run_info,
-              attachments=attachments)
+    obj.reply(resolved_run_info, attachments=attachments)
 
 
 def howto_inspect_run(resolver):
-    return\
-        "Use `inspect` to specify the run to inspect. The run "\
-        "can be running currently (it does not have to be finished) or "\
+    return (
+        "Use `inspect` to specify the run to inspect. The run "
+        "can be running currently (it does not have to be finished) or "
         "it can be any historical run. %s" % resolver.howto()
+    )

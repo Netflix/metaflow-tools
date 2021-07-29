@@ -21,26 +21,24 @@ MIN_RTM_EVENTS_INTERVAL = 1
 
 
 class MFBInvalidPermalink(MFBException):
-    headlink = 'Invalid Slack permalink'
+    headlink = "Invalid Slack permalink"
 
     def __init__(self, url):
-        super(MFBInvalidPermalink, self).__init__(
-            "Invalid permalink: %s" % url)
+        super(MFBInvalidPermalink, self).__init__("Invalid permalink: %s" % url)
 
 
 class MFBUserNotFound(MFBException):
-    headline = 'User not found'
+    headline = "User not found"
 
     def __init__(self, user):
         super(MFBUserNotFound, self).__init__("User not found: %s" % user)
 
 
 class MFBChannelNotFound(MFBException):
-    headline = 'Channel not found'
+    headline = "Channel not found"
 
     def __init__(self, chan):
-        super(MFBChannelNotFound, self).__init__(
-            "Channel not found: %s" % chan)
+        super(MFBChannelNotFound, self).__init__("Channel not found: %s" % chan)
 
 
 class MFBClientException(MFBException):
@@ -48,10 +46,10 @@ class MFBClientException(MFBException):
     traceback = True
 
     def __init__(self, method, args, resp=None):
-        lst = ', '.join('%s=%s' % x for x in args.items())
+        lst = ", ".join("%s=%s" % x for x in args.items())
         msg = "Request '%s' with args %s failed" % (method, lst)
         if resp:
-            msg += '. Unknown response: %s' % resp
+            msg += ". Unknown response: %s" % resp
         self.resp = resp
         super(MFBClientException, self).__init__(msg)
 
@@ -100,9 +98,11 @@ class SlackMessageQueue(Queue):
         return queue_items
 
 
-def process(message_event_queue: SlackMessageQueue,
-            client: SocketModeClient,
-            req: SocketModeRequest):
+def process(
+    message_event_queue: SlackMessageQueue,
+    client: SocketModeClient,
+    req: SocketModeRequest,
+):
     if req.type == "events_api":
         # Slash commands will have a different req.type
         """
@@ -117,7 +117,7 @@ def process(message_event_queue: SlackMessageQueue,
         # Acknowledge the request anyway
         response = SocketModeResponse(envelope_id=req.envelope_id)
         client.send_socket_mode_response(response)
-        message_event_queue.injest([req.payload['event']])
+        message_event_queue.injest([req.payload["event"]])
 
 
 class SlackSocketSubscriber(Thread):
@@ -130,7 +130,11 @@ class SlackSocketSubscriber(Thread):
     TODO : Ensure this thread runs without any kind of failure. Stress test the thread.
     """
 
-    def __init__(self, app_token, message_event_queue: Queue,) -> None:
+    def __init__(
+        self,
+        app_token,
+        message_event_queue: Queue,
+    ) -> None:
         assert app_token is not None
         super().__init__(daemon=True)
         self.message_event_queue = message_event_queue
@@ -189,33 +193,32 @@ class MFBSlackClientV2(object):
         return self._slack_token
 
     def bot_name(self):
-        return self.sc.auth_test()['user']
+        return self.sc.auth_test()["user"]
 
     def bot_user_id(self):
         # permission : auth.test
-        return self.sc.auth_test()['user_id']
+        return self.sc.auth_test()["user_id"]
 
     def post_message(self, msg, channel, thread=None, attachments=None, blocks=None):
         # This function is important because the CLI wrapper with click and the
         # MFBServer will use this to put messages in admin thread and actual user threads.
-        args = {'channel': channel}
+        args = {"channel": channel}
         if msg is not None:
-            args['text'] = msg
+            args["text"] = msg
         if attachments:
-            args['attachments'] = json.dumps(attachments)
+            args["attachments"] = json.dumps(attachments)
         if thread:
-            args['thread_ts'] = thread
+            args["thread_ts"] = thread
         if blocks is not None:
-            args['blocks'] = blocks
-        return self.sc.chat_postMessage(
-            **args
-        )['ts']
+            args["blocks"] = blocks
+        return self.sc.chat_postMessage(**args)["ts"]
 
     def _connect(self):
         # Instantiate event reader over here.
         if not self.rtm_connected:
             self._rmt_feed_queue, self._socket_tread = create_slack_subscriber(
-                self._app_token)
+                self._app_token
+            )
             self.rtm_connected = True
         return self.rtm_connected
 
@@ -244,9 +247,9 @@ class MFBSlackClientV2(object):
         # SCOPE:  groups:write
         # SCOPE:  channels:manage
         try:
-            return self.sc.conversations_open(users=user)['channel']['id']
+            return self.sc.conversations_open(users=user)["channel"]["id"]
         except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'user_not_found':
+            if ex.resp["error"] == "user_not_found":
                 raise MFBUserNotFound(user)
             else:
                 raise
@@ -254,9 +257,9 @@ class MFBSlackClientV2(object):
     def user_by_email(self, email):
         # permission : users.lookupByEmail
         try:
-            return self.sc.users_lookupByEmail(email=email)['user']['id']
+            return self.sc.users_lookupByEmail(email=email)["user"]["id"]
         except MFBRequestFailed as ex:
-            if ex.resp['error'] == 'users_not_found':
+            if ex.resp["error"] == "users_not_found":
                 raise MFBUserNotFound(email)
             else:
                 raise
@@ -268,7 +271,8 @@ class MFBSlackClientV2(object):
         # SCOPE : im:history
         # SCOPE : mpim:history
         events = self._page_iter(
-            self.sc.conversations_history, 'messages', channel=channel)
+            self.sc.conversations_history, "messages", channel=channel
+        )
         return self._format_history(events, **opts)
 
     def past_replies(self, channel, thread, **opts):
@@ -277,14 +281,16 @@ class MFBSlackClientV2(object):
         # SCOPE : groups:history
         # SCOPE : im:history
         # SCOPE : mpim:history
-        events = self._page_iter(self.sc.conversations_replies,
-                                 'messages',
-                                 channel=channel,
-                                 ts=thread)
-        return (event for event in self._format_history(events, **opts)
-                if 'reply_count' not in event)
+        events = self._page_iter(
+            self.sc.conversations_replies, "messages", channel=channel, ts=thread
+        )
+        return (
+            event
+            for event in self._format_history(events, **opts)
+            if "reply_count" not in event
+        )
 
-    def _format_history(self, events, max_number=None, sort_key='ts'):
+    def _format_history(self, events, max_number=None, sort_key="ts"):
         if max_number is not None:
             events = islice(events, max_number)
         if sort_key:
@@ -293,15 +299,15 @@ class MFBSlackClientV2(object):
 
     def _page_iter(self, method, it_field, **args):
         # Iteartor for getting paginated data
-        args['limit'] = 200
+        args["limit"] = 200
         while True:
             resp = method(**args)
             for item in resp[it_field]:
                 yield item
             cursor = None
-            if 'response_metadata' in resp:
-                cursor = resp['response_metadata'].get('next_cursor')
+            if "response_metadata" in resp:
+                cursor = resp["response_metadata"].get("next_cursor")
             if cursor:
-                args['cursor'] = cursor
+                args["cursor"] = cursor
             else:
                 break

@@ -20,7 +20,7 @@ SUPPORTED_RULES = []
 # This module is loaded at Last because the rules
 # in basic have Greeting Events on new-thread as basic event
 # For this reason we need to ensure that metaflowbot.actions.basic loads last
-LAST_LOAD_MODULE = 'metaflowbot.actions.basic'
+LAST_LOAD_MODULE = "metaflowbot.actions.basic"
 
 for finder, name, ispkg in iter_namespace(actions):
     if name == LAST_LOAD_MODULE:
@@ -33,9 +33,11 @@ for finder, name, ispkg in iter_namespace(actions):
         SUPPORTED_RULES.extend(action_package.RULES)
         SUPPORTED_ACTIONS[action] = action_package
     except AttributeError as e:
-        print(f"Ignoring Action Import of {action} Due to Action Not "
-              "Having Its RULES object. Create a RULES object"
-              "as a part of your module to Include it as an action")
+        print(
+            f"Ignoring Action Import of {action} Due to Action Not "
+            "Having Its RULES object. Create a RULES object"
+            "as a part of your module to Include it as an action"
+        )
 
 
 SUPPORTED_ACTIONS[LAST_LOAD_MODULE] = importlib.import_module(LAST_LOAD_MODULE)

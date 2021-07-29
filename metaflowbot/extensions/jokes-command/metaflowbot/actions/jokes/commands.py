@@ -21,26 +21,24 @@ def random_joke():
     return tt
 
 
-
 @action.command(help="Tell Me A Joke")
-@click.option('--create-thread/--no-create-thread',
-              help="Will create a new thread")
+@click.option("--create-thread/--no-create-thread", help="Will create a new thread")
 @click.pass_context
-def joke(ctx,create_thread=False):
+def joke(ctx, create_thread=False):
     obj = ctx.obj
     if create_thread:
         obj.publish_state(MFBState.message_new_thread(obj.thread))
     try:
         joke = random_joke()[0]
         setup = joke["setup"]
-        punchline= joke["punchline"]
+        punchline = joke["punchline"]
         obj.reply(
-            f'''
+            f"""
             {setup} \n{punchline}
-            '''
+            """
         )
     except:
         traceback.print_exc()
         my_traceback = traceback.format_exc()
         err_msg = "Sorry, I couldn't find a joke at the moment :meow_dead:"
-        obj.reply(err_msg,**error_message(my_traceback,message=err_msg))
+        obj.reply(err_msg, **error_message(my_traceback, message=err_msg))

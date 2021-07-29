@@ -2,7 +2,7 @@ from hashlib import sha1
 
 
 def process_fingerprint_matches(fingerprint):
-    pid, cmdhash = fingerprint.split(':')
+    pid, cmdhash = fingerprint.split(":")
     try:
         # if PID is not alive anymore, reading /proc/PID/cmdline
         # fails, so we return False. There's a theoretical possibility
@@ -16,6 +16,6 @@ def process_fingerprint_matches(fingerprint):
 
 
 def process_fingerprint(pid):
-    path = '/proc/%s/cmdline' % pid
-    with open(path, 'rb') as f:
-        return '%s:%s' % (pid, sha1(f.read()).hexdigest())
+    path = "/proc/%s/cmdline" % pid
+    with open(path, "rb") as f:
+        return "%s:%s" % (pid, sha1(f.read()).hexdigest())
