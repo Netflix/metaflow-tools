@@ -14,6 +14,7 @@ def process_fingerprint_matches(fingerprint):
     except:
         return False
 
+
 def process_fingerprint(pid):
     path = '/proc/%s/cmdline' % pid
     with open(path, 'rb') as f:

@@ -14,6 +14,7 @@ def iter_namespace(ns_pkg):
     # the name.
     return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
 
+
 SUPPORTED_ACTIONS = {}
 SUPPORTED_RULES = []
 # This module is loaded at Last because the rules
@@ -33,8 +34,8 @@ for finder, name, ispkg in iter_namespace(actions):
         SUPPORTED_ACTIONS[action] = action_package
     except AttributeError as e:
         print(f"Ignoring Action Import of {action} Due to Action Not "
-            "Having Its RULES object. Create a RULES object"
-            "as a part of your module to Include it as an action")
+              "Having Its RULES object. Create a RULES object"
+              "as a part of your module to Include it as an action")
 
 
 SUPPORTED_ACTIONS[LAST_LOAD_MODULE] = importlib.import_module(LAST_LOAD_MODULE)

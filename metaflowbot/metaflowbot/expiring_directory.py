@@ -5,6 +5,7 @@ import time
 
 HOUR = 60 * 60
 
+
 def refresh_timestamp(f):
     def wrapper(self, *args, **kwargs):
         try:
@@ -13,11 +14,13 @@ def refresh_timestamp(f):
             self._refresh_timestamp()
     return wrapper
 
+
 def garbage_collect(f):
     def wrapper(self, *args, **kwargs):
         self._garbage_collect()
         return f(self, *args, **kwargs)
     return wrapper
+
 
 class ExpiringDirectory(object):
 
@@ -44,7 +47,7 @@ class ExpiringDirectory(object):
         # comments in _garbage_collect() below. Hence the
         # " - HOUR" check below.
         return os.path.exists(self.root) and\
-               not self._should_be_deleted(self.root, self.ttl - HOUR)
+            not self._should_be_deleted(self.root, self.ttl - HOUR)
 
     def _should_be_deleted(self, root, ttl):
         last_access = os.path.join(root, '.last')

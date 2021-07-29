@@ -53,7 +53,8 @@ def inspect_run(ctx, runspec=None, howto=False):
         except Exception as e:
             traceback.print_exc()
             my_traceback = traceback.format_exc()
-            obj.reply(DEFAULT_ERROR_MESSAGE,**error_message(my_traceback))
+            obj.reply(DEFAULT_ERROR_MESSAGE, **error_message(my_traceback))
+
 
 @action.command(help="Inspect the current run or show help text")
 @click.option('--run-id',
@@ -63,7 +64,7 @@ def inspect_run(ctx, runspec=None, howto=False):
 @click.option('--howto/--no-howto',
               help="Only show help text")
 @click.pass_obj
-def inspect(obj, run_id=None,create_thread=False, howto=False):
+def inspect(obj, run_id=None, create_thread=False, howto=False):
     resolver = RunResolver('inspect')
     if create_thread:
         obj.publish_state(MFBState.message_new_thread(obj.thread))
@@ -77,13 +78,14 @@ def inspect(obj, run_id=None,create_thread=False, howto=False):
         except:
             traceback.print_exc()
             my_traceback = traceback.format_exc()
-            obj.reply(DEFAULT_ERROR_MESSAGE,**error_message(my_traceback))
+            obj.reply(DEFAULT_ERROR_MESSAGE, **error_message(my_traceback))
 
 
 def run_status(run):
     if run.finished:
         if run.successful:
-            mins = datetime_response_parsing((DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)).total_seconds())
+            mins = datetime_response_parsing(
+                (DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)).total_seconds())
             return "It ran for %s and finished successfully." % mins
         else:
             return "It did not finish successfully."
@@ -91,14 +93,13 @@ def run_status(run):
         return "It has not finished."
 
 
-
 def reply_inspect(obj, run_id):
 
     # max_steps is added because slack has a limit on how large a payload
     # can be sent to slack.
-    def step_resolver(steps,max_steps=SLACK_MAX_BLOCKS):
+    def step_resolver(steps, max_steps=SLACK_MAX_BLOCKS):
         sects = []
-        for idx,step in enumerate(reversed(steps)):
+        for idx, step in enumerate(reversed(steps)):
             if idx > max_steps:
                 break
             tasks = list(step)
@@ -110,26 +111,27 @@ def reply_inspect(obj, run_id):
                 status = 'Some tasks failed or are still running.'
 
             fields = [{'title': 'Status',
-                    'value': status,
-                    'short': False},
-                    {'title': 'Runtime',
-                    'value': step_runtime(tasks),
-                    'short': True},
-                    {'title': 'Tasks Started',
-                    'value': len(tasks),
-                    'short': True}]
+                       'value': status,
+                       'short': False},
+                      {'title': 'Runtime',
+                       'value': step_runtime(tasks),
+                       'short': True},
+                      {'title': 'Tasks Started',
+                       'value': len(tasks),
+                       'short': True}]
             sects.append({'fallback': 'step %s' % step.id,
-                        'title': 'Step: ' + step.id,
-                        'fields': fields,
-                        'color': color})
+                          'title': 'Step: ' + step.id,
+                          'fields': fields,
+                          'color': color})
         return sects
 
-    def make_resolved_run(run:Run,total_steps = 0,max_steps=SLACK_MAX_BLOCKS):
+    def make_resolved_run(run: Run, total_steps=0, max_steps=SLACK_MAX_BLOCKS):
         resolved_run = ResolvedRun(id=run.pathspec,
-                            who=find_user(run),
-                            flow= run.pathspec.split('/')[0],
-                            when=run.created_at)
-        ago = timeago.format(DATEPARSER(resolved_run.when), now=datetime.utcnow())
+                                   who=find_user(run),
+                                   flow=run.pathspec.split('/')[0],
+                                   when=run.created_at)
+        ago = timeago.format(DATEPARSER(resolved_run.when),
+                             now=datetime.utcnow())
         head = ['Run *%s* was started %s by _%s_.' % (resolved_run.id, ago, resolved_run.who),
                 run_status(run),
                 'Tags: %s' % ', '.join('`%s`' % tag for tag in run.tags),
@@ -138,10 +140,10 @@ def reply_inspect(obj, run_id):
     namespace(None)
     run = Run(run_id)
     steps = list(run)
-    resolved_run_info = make_resolved_run(run,total_steps=len(steps))
+    resolved_run_info = make_resolved_run(run, total_steps=len(steps))
     attachments = step_resolver(steps)
-    obj.reply(resolved_run_info,\
-            attachments=attachments)
+    obj.reply(resolved_run_info,
+              attachments=attachments)
 
 
 def howto_inspect_run(resolver):

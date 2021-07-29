@@ -13,18 +13,19 @@ from metaflowbot.state import MFBState
 @click.option('--create-thread/--no-create-thread',
               help="Will create a new thread")
 @click.pass_obj
-def new_thread(obj,create_thread=False):
+def new_thread(obj, create_thread=False):
     try:
         if create_thread:
             obj.publish_state(MFBState.message_new_thread(obj.thread))
         greeting = IntroMessage()
         dm_token = '<@%s>' % obj.sc.bot_user_id()
-        intromsg,blocks = greeting.get_slack_message(dm_token)
-        obj.reply(intromsg,blocks=blocks)
+        intromsg, blocks = greeting.get_slack_message(dm_token)
+        obj.reply(intromsg, blocks=blocks)
     except:
         traceback.print_exc()
         my_traceback = traceback.format_exc()
-        obj.reply(DEFAULT_ERROR_MESSAGE,**error_message(my_traceback))
+        obj.reply(DEFAULT_ERROR_MESSAGE, **error_message(my_traceback))
+
 
 @action.command(help='reply')
 @click.option('--message',
@@ -39,13 +40,13 @@ def reply(obj, message=None):
 @click.option('--create-thread/--no-create-thread',
               help="Will create a new thread")
 @click.pass_obj
-def version(obj,create_thread=False):
+def version(obj, create_thread=False):
     try:
         if create_thread:
             obj.publish_state(MFBState.message_new_thread(obj.thread))
-        message= BotVersion().get_slack_message()
+        message = BotVersion().get_slack_message()
         obj.reply(message)
     except:
         traceback.print_exc()
         my_traceback = traceback.format_exc()
-        obj.reply(DEFAULT_ERROR_MESSAGE,**error_message(my_traceback))
+        obj.reply(DEFAULT_ERROR_MESSAGE, **error_message(my_traceback))

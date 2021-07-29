@@ -18,6 +18,8 @@ CODE_ROOT = 'code'
 # a key feature of MFBCode is that it is safe to use
 # in multiple concurrent processes that deal with the
 # same run.
+
+
 class MFBCode(ExpiringDirectory):
 
     def __init__(self, run_pathspec):
@@ -70,13 +72,13 @@ class MFBCode(ExpiringDirectory):
             # we need to write the function output to a file instead
             # of capturing it on stdout, since the user's module may
             # output anything on stdout/stderr
-            tmp.write('\n'.join([\
+            tmp.write('\n'.join([
                 'import json',
                 'MODULE_NAME = "{module_name}"',
                 '{get_flow}',
                 '{user_func}',
                 'with open("{tmp}.out", "w") as f:',
-                '    json.dump({user_func_name}(get_flow()), f)'])\
+                '    json.dump({user_func_name}(get_flow()), f)'])
                 .format(module_name=script_name.split('.')[0],
                         get_flow=format_func(get_flow),
                         user_func=format_func(func),
@@ -112,6 +114,7 @@ class MFBCode(ExpiringDirectory):
         done = path + '.DONE'
         os.symlink(os.path.basename(path), done)
         os.rename(done, self.root)
+
 
 if __name__ == '__main__':
     def test_func(x):

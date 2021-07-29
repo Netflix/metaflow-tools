@@ -31,6 +31,7 @@ Event = namedtuple('Event',
                     'is_mention',
                     'is_direct'])
 
+
 class FormatFriendlyDict(object):
     def __init__(self, data):
         self.data = data
@@ -44,9 +45,10 @@ class FormatFriendlyDict(object):
         else:
             return v
 
+
 class MFBServer(object):
 
-    def __init__(self, slack_client:MFBSlackClientV2, admin_email, rules, logger, action_user):
+    def __init__(self, slack_client: MFBSlackClientV2, admin_email, rules, logger, action_user):
         self.sc = slack_client
         self.state = MFBState()
         self.dm_token = '<@%s>' % self.sc.bot_user_id()
@@ -110,8 +112,8 @@ class MFBServer(object):
     def loop_forever(self):
         while True:
             # TODO in PID check, check disk space, alert if > k% used
-            for event in chain(self._lost_process_events(),\
-                                self._make_events(self.sc.rtm_events())):
+            for event in chain(self._lost_process_events(),
+                               self._make_events(self.sc.rtm_events())):
                 self._log_event(event)
                 if event.type == 'state_change':
                     self._update_state(event)
@@ -148,7 +150,6 @@ class MFBServer(object):
                 else:
                     lost[thread] = ts
         self._lost_processes = lost
-
 
     def _make_events(self, event_iter, admin_thread=None):
         """_make_events [summary]
@@ -268,7 +269,7 @@ class MFBServer(object):
             env['PYTHONPATH'] = os.environ['PYTHONPATH']
 
         # Use the Parent server thread's environment variables.
-        env.update({k:os.environ[k] for k in os.environ if k not in env})
+        env.update({k: os.environ[k] for k in os.environ if k not in env})
         cmd = []
         # We don't need app-token because only calling
         # server needs an app token.

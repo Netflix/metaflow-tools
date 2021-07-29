@@ -36,15 +36,15 @@ class MFBRules(object):
         try:
             # Todo Run Rule Parsing here.
             # todo check for important keys heree
-            rules = yaml.load(data,Loader=yaml.SafeLoader)
+            rules = yaml.load(data, Loader=yaml.SafeLoader)
         except Exception as ex:
             raise MFBRulesParseException(str(ex))
 
         for i, rule in enumerate(rules):
             if not all(k in rule for k in ('name', 'event_type', 'action')):
                 raise MFBRulesParseException("Rule #%d does not have name, "
-                                            "event_type, and action "
-                                            "specified." % (i + 1))
+                                             "event_type, and action "
+                                             "specified." % (i + 1))
             msg = rule.get('message')
             if msg:
                 rule['message'] = re.compile(msg, flags=re.IGNORECASE)
@@ -85,6 +85,6 @@ class MFBRules(object):
             if context and not state.is_state_match(context, event):
                 continue
             return rule['name'],\
-                   rule['action'],\
-                   re_match.groups() if re_match else [],\
-                   rule.get('ephemeral_context_update')
+                rule['action'],\
+                re_match.groups() if re_match else [],\
+                rule.get('ephemeral_context_update')

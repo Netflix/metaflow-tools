@@ -6,6 +6,7 @@ from .process_monitor import process_fingerprint
 
 PREFIX = '[MFB] '
 
+
 class MFBState(object):
 
     def __init__(self):
@@ -55,7 +56,7 @@ class MFBState(object):
             attrs = msg.get('attributes', {})
             key = rule.get('key')
             return key in attrs and\
-                   ('value' not in rule or rule['value'] == attrs[key])
+                ('value' not in rule or rule['value'] == attrs[key])
         else:
             return all(msg.get(k) == v for k, v in rule.items())
 
@@ -65,7 +66,7 @@ class MFBState(object):
 
     def is_admin_thread_parent(self, msg):
         return self.is_state_message(msg) and\
-               self._parse_message(msg).get('type') == 'admin_thread'
+            self._parse_message(msg).get('type') == 'admin_thread'
 
     def is_state_message(self, msg):
         return msg and msg.startswith(PREFIX)

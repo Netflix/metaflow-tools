@@ -21,6 +21,7 @@ HOUR = 60 * 60
 RUN_TTL = 7 * 24 * HOUR
 RUNS_ROOT = 'runs'
 
+
 class RunStatus(object):
     def __init__(self, tags):
         self.status = 'starting'
@@ -31,6 +32,7 @@ class RunStatus(object):
         self.num_active_tasks = 0
         self.last_lines = []
 
+
 Run = namedtuple('Run', ['id', 'proc', 'stdout', 'stderr', 'status'])
 
 # MFBRunGroup assumes that one process controls one rungroup_id.
@@ -38,6 +40,8 @@ Run = namedtuple('Run', ['id', 'proc', 'stdout', 'stderr', 'status'])
 # updates in one rungroup_id concurrently. However, adding files
 # with .add_indicator() and read-only operations, e.g. .read(),
 # are safe in a multiprocess environment.
+
+
 class MFBRunGroup(ExpiringDirectory):
 
     def __init__(self, rungroup_id, code=None, username=None):

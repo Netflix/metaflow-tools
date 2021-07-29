@@ -22,22 +22,31 @@ MIN_RTM_EVENTS_INTERVAL = 1
 
 class MFBInvalidPermalink(MFBException):
     headlink = 'Invalid Slack permalink'
+
     def __init__(self, url):
-        super(MFBInvalidPermalink, self).__init__("Invalid permalink: %s" % url)
+        super(MFBInvalidPermalink, self).__init__(
+            "Invalid permalink: %s" % url)
+
 
 class MFBUserNotFound(MFBException):
     headline = 'User not found'
+
     def __init__(self, user):
         super(MFBUserNotFound, self).__init__("User not found: %s" % user)
 
+
 class MFBChannelNotFound(MFBException):
     headline = 'Channel not found'
+
     def __init__(self, chan):
-        super(MFBChannelNotFound, self).__init__("Channel not found: %s" % chan)
+        super(MFBChannelNotFound, self).__init__(
+            "Channel not found: %s" % chan)
+
 
 class MFBClientException(MFBException):
     headline = "Slack client failed"
     traceback = True
+
     def __init__(self, method, args, resp=None):
         lst = ', '.join('%s=%s' % x for x in args.items())
         msg = "Request '%s' with args %s failed" % (method, lst)
@@ -49,20 +58,25 @@ class MFBClientException(MFBException):
     def __str__(self):
         return self.msg
 
+
 class MFBRequestFailed(MFBClientException):
     pass
+
+
 class MFBRateLimitException(MFBClientException):
     pass
+
 
 class SlackMessageQueue(Queue):
     """SlackMessageQueue
     Message Queue to hold all Slack messages from `SlackSocketSubscriber`.
     TODO: Stress Test the queue.
     """
+
     def __init__(self, maxsize: int = 0) -> None:
         super().__init__(maxsize=maxsize)
 
-    def injest(self,messages:List[dict]) -> None:
+    def injest(self, messages: List[dict]) -> None:
         """injest
         Push Multiple messsage to Queue. \
         Queue.put is by default Blocking to avoid Loosing messages and has Mutex's internally.
@@ -70,8 +84,7 @@ class SlackMessageQueue(Queue):
         for m in messages:
             self.put(m)
 
-
-    def flush(self)-> List[dict]:
+    def flush(self) -> List[dict]:
         """flush
         TODO : Evaluate this abstraction better.
         Take all messages from the Queue and return to the caller.
@@ -87,8 +100,8 @@ class SlackMessageQueue(Queue):
         return queue_items
 
 
-def process(message_event_queue:SlackMessageQueue,\
-            client: SocketModeClient,\
+def process(message_event_queue: SlackMessageQueue,
+            client: SocketModeClient,
             req: SocketModeRequest):
     if req.type == "events_api":
         # Slash commands will have a different req.type
@@ -106,6 +119,7 @@ def process(message_event_queue:SlackMessageQueue,\
         client.send_socket_mode_response(response)
         message_event_queue.injest([req.payload['event']])
 
+
 class SlackSocketSubscriber(Thread):
     """SlackSocketSubscriber
     This will be a daemon thread that will connect to slack and subscribe to the message feed via the `SocketModeClient`
@@ -115,7 +129,8 @@ class SlackSocketSubscriber(Thread):
 
     TODO : Ensure this thread runs without any kind of failure. Stress test the thread.
     """
-    def __init__(self,app_token,message_event_queue:Queue,) -> None:
+
+    def __init__(self, app_token, message_event_queue: Queue,) -> None:
         assert app_token is not None
         super().__init__(daemon=True)
         self.message_event_queue = message_event_queue
@@ -130,7 +145,7 @@ class SlackSocketSubscriber(Thread):
             app_token=self._app_token,  # xapp-A111-222-xyz
         )
         # Bind the queue to ensure Message Paassig.
-        subscriber_func = partial(process,self.message_event_queue)
+        subscriber_func = partial(process, self.message_event_queue)
         self.sc.socket_mode_request_listeners.append(subscriber_func)
         # Establish a WebSocket connection to the Socket Mode servers
         self.sc.connect()
@@ -139,9 +154,9 @@ class SlackSocketSubscriber(Thread):
 
 def create_slack_subscriber(app_token):
     message_event_queue = SlackMessageQueue()
-    socket_thread = SlackSocketSubscriber(app_token,message_event_queue)
+    socket_thread = SlackSocketSubscriber(app_token, message_event_queue)
     socket_thread.start()
-    return message_event_queue,socket_thread
+    return message_event_queue, socket_thread
 
 
 class MFBSlackClientV2(object):
@@ -158,7 +173,8 @@ class MFBSlackClientV2(object):
     `SocketModeClient` leverages a Message queue which gets the RTM events.
 
     """
-    def __init__(self,slack_token,slack_app_token=None) -> None:
+
+    def __init__(self, slack_token, slack_app_token=None) -> None:
         assert slack_token is not None
         self.sc = WebClient(token=slack_token)  # xoxb-111-222-xyz
         self._app_token = slack_app_token
@@ -179,7 +195,7 @@ class MFBSlackClientV2(object):
         # permission : auth.test
         return self.sc.auth_test()['user_id']
 
-    def post_message(self, msg, channel, thread=None, attachments=None,blocks=None):
+    def post_message(self, msg, channel, thread=None, attachments=None, blocks=None):
         # This function is important because the CLI wrapper with click and the
         # MFBServer will use this to put messages in admin thread and actual user threads.
         args = {'channel': channel}
@@ -198,10 +214,10 @@ class MFBSlackClientV2(object):
     def _connect(self):
         # Instantiate event reader over here.
         if not self.rtm_connected:
-            self._rmt_feed_queue,self._socket_tread = create_slack_subscriber(self._app_token)
+            self._rmt_feed_queue, self._socket_tread = create_slack_subscriber(
+                self._app_token)
             self.rtm_connected = True
         return self.rtm_connected
-
 
     def rtm_events(self):
         """rtm_events
@@ -234,6 +250,7 @@ class MFBSlackClientV2(object):
                 raise MFBUserNotFound(user)
             else:
                 raise
+
     def user_by_email(self, email):
         # permission : users.lookupByEmail
         try:
@@ -243,16 +260,16 @@ class MFBSlackClientV2(object):
                 raise MFBUserNotFound(email)
             else:
                 raise
+
     def past_events(self, channel, **opts):
         # API : conversations.history
         # SCOPE : channels:history
         # SCOPE : groups:history
         # SCOPE : im:history
         # SCOPE : mpim:history
-        events = self._page_iter(self.sc.conversations_history,'messages',channel=channel)
+        events = self._page_iter(
+            self.sc.conversations_history, 'messages', channel=channel)
         return self._format_history(events, **opts)
-
-
 
     def past_replies(self, channel, thread, **opts):
         # API: conversations.replies
