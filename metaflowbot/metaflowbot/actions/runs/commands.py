@@ -4,6 +4,7 @@ from datetime import datetime
 import click
 import timeago
 from metaflow import Run, namespace
+from metaflow.client.filecache import FileCacheException
 from metaflow.exception import MetaflowNotFound
 
 from metaflowbot.cli import action
@@ -67,6 +68,8 @@ def inspect(obj, run_id=None, create_thread=False, howto=False):
             reply_inspect(obj, run_id)
         except MetaflowNotFound as e:
             obj.reply(HEADINGS.NO_RUNS.value)
+        except FileCacheException as e:
+            obj.reply(HEADINGS.NO_S3_DATASTORE.value)
         except:
             traceback.print_exc()
             my_traceback = traceback.format_exc()
