@@ -1,7 +1,7 @@
 # Metaflow Bot
 
 ## Documentation
-Thorough Documentation is present in the [Documentation folder](./Docs)
+Thorough Documentation is present in the [Documentation folder](./docs)
 ## Bot Commands
 
 - `@flowey help` | `@flowey hi` : Help
