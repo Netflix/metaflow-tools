@@ -21,7 +21,7 @@ def random_joke():
     return tt
 
 
-@action.command(help="Tell Me A Joke")
+@action.command(help="Tell me a joke")
 @click.option("--create-thread/--no-create-thread", help="Will create a new thread")
 @click.pass_context
 def joke(ctx, create_thread=False):
