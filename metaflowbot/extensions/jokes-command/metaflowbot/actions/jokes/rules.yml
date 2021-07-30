@@ -1,11 +1,11 @@
-- name: Tell me a Joke
+- name: Tell me a joke
   event_type: user_message
   message: tell me a joke
   action:
     op: joke
 
 
-- name: Tell me a Joke
+- name: Tell me a joke
   event_type: new_thread
   message: tell me a joke
   action:

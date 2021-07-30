@@ -4,11 +4,9 @@ import subprocess
 import sys
 import time
 import traceback
-from collections import defaultdict, namedtuple
-from itertools import chain
+from collections import namedtuple
 
 from .exceptions import MFBException
-from .process_monitor import process_fingerprint_matches
 from .slack_client import MFBSlackClientV2
 from .state import MFBState
 
@@ -87,7 +85,6 @@ class MFBServer(object):
             raise MFBException(
                 "Could not find a state thread. " "Restart with --new-admin-thread."
             )
-        # TODO announce takeover
 
     def _state_event_log(self):
         for top_event in self.sc.past_events(self.admin_chan):
@@ -116,56 +113,17 @@ class MFBServer(object):
 
     def loop_forever(self):
         while True:
-            # TODO in PID check, check disk space, alert if > k% used
-            for event in chain(
-                self._lost_process_events(), self._make_events(self.sc.rtm_events())
-            ):
+            for event in  self._make_events(self.sc.rtm_events()):
                 self._log_event(event)
                 if event.type == "state_change":
                     self._update_state(event)
                 self._apply_rule(event)
             time.sleep(1)
 
-    def _lost_process_events(self):
-        """_lost_process_events [summary]
-        This is a event monitor for the lost processes of the
-        and it runs cleanup. Oddly `cleanup-lost-run` is not present
-        even though it is in the YML file.
-        TODO: Find coverage for the actions created because of these events
-        :yield: [description]
-        :rtype: [type]
-        """
-        now = time.time()
-        lost = {}
-        for fingerprint, thread in self.state.get_monitors():
-            if not process_fingerprint_matches(fingerprint):
-                ts = self._lost_processes.get(thread, now)
-                if now - ts > LOST_PROCESS_LIMIT:
-                    # we want to trigger the lost_process event
-                    # only once, hence we need to disable the
-                    # monitor immediately
-                    self.state.disable_monitor(fingerprint)
-                    chan, thread_ts = thread.split(":")
-                    args = {k: None for k in Event._fields}
-                    args.update(
-                        dict(
-                            type="lost_process",
-                            msg=fingerprint,
-                            chan=chan,
-                            chan_name=self.state.channel_name(chan),
-                            thread_ts=thread_ts,
-                        )
-                    )
-                    yield Event(**args)
-                else:
-                    lost[thread] = ts
-        self._lost_processes = lost
 
     def _make_events(self, event_iter, admin_thread=None):
         """_make_events [summary]
-        # TODO : Figure the converage of this method to understand behaviour.
-        Makes custom Event object from event's coming from
-        slack socket subscriber.
+        Makes custom Event object from slack events.
         """
         if admin_thread is None:
             admin_thread = self.admin_thread

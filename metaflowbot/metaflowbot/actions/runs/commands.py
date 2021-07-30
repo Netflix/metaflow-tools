@@ -1,12 +1,9 @@
-import json
 import traceback
 from datetime import datetime
-from urllib.parse import urlparse
 
 import click
 import timeago
 from metaflow import Run, namespace
-from metaflow.datastore.util.s3util import get_s3_client
 from metaflow.exception import MetaflowNotFound
 
 from metaflowbot.cli import action
@@ -79,12 +76,12 @@ def inspect(obj, run_id=None, create_thread=False, howto=False):
 def run_status(run):
     if run.finished:
         if run.successful:
-            mins = datetime_response_parsing(
+            parsed_time_string = datetime_response_parsing(
                 (
                     DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)
                 ).total_seconds()
             )
-            return "It ran for %s and finished successfully." % mins
+            return "It ran for %s and finished successfully." % parsed_time_string
         else:
             return "It did not finish successfully."
     else:

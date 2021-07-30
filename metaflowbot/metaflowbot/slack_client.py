@@ -1,8 +1,4 @@
 import json
-import os
-import re
-import time
-import urllib
 from functools import partial
 from itertools import islice
 from queue import Empty, Queue

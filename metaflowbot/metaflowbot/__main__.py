@@ -4,7 +4,7 @@ import click
 
 # `action_loader` needs to be loaded before `cli` because
 # it will load all the actions that may have been custom installed.
-# Once `action_loader` is loaded, `cli` can safely be loaded;
+# Once `action_loader` is loaded, `cli` can be safely loaded;
 # We do this because `cli` loads of SUPPORTED_ACTIONS object which needs
 # `action_loader` to be loaded first
 from . import action_loader, cli

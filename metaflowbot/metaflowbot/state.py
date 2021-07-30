@@ -2,8 +2,6 @@ import json
 import os
 import traceback
 
-from .process_monitor import process_fingerprint
-
 PREFIX = "[MFB] "
 
 
@@ -71,12 +69,6 @@ class MFBState(object):
     def is_state_message(self, msg):
         return msg and msg.startswith(PREFIX)
 
-    def get_monitors(self):
-        return list(self._monitors.items())
-
-    def disable_monitor(self, fingerprint):
-        self._monitors.pop(fingerprint, None)
-
     def update(self, event):
         try:
             msg = self._parse_message(event.msg)
@@ -85,16 +77,8 @@ class MFBState(object):
                 pass
             elif msg_type == "new_thread":
                 self._thread_state[msg["thread"]] = {}
-            elif msg_type == "channel_info":
-                self._channel_name[msg["channel"]] = msg["channel_name"]
-            elif msg_type == "user_info":
-                self._user_info[msg["user"]] = msg["user_name"]
             elif msg_type == "set":
                 self.update_thread(msg["thread"], msg["attributes"])
-            elif msg_type == "enable_monitor":
-                self._monitors[msg["fingerprint"]] = msg["thread"]
-            elif msg_type == "disable_monitor":
-                self.disable_monitor(msg["fingerprint"])
             else:
                 return False
             return True
@@ -128,31 +112,5 @@ class MFBState(object):
         return cls._make_message(type="admin_thread")
 
     @classmethod
-    def message_channel_info(cls, channel, channel_name):
-        return cls._make_message(
-            type="channel_info", channel=channel, channel_name=channel_name
-        )
-
-    @classmethod
-    def message_user_info(cls, user, user_name):
-        return cls._make_message(type="user_info", user=user, user_name=user_name)
-
-    @classmethod
     def message_set_attributes(cls, thread, attributes):
         return cls._make_message(type="set", attributes=attributes, thread=thread)
-
-    @classmethod
-    def message_enable_monitor(cls, thread):
-        return cls._make_message(
-            type="enable_monitor",
-            fingerprint=process_fingerprint(os.getpid()),
-            thread=thread,
-        )
-
-    @classmethod
-    def message_disable_monitor(cls, thread, fingerprint=None):
-        if fingerprint is None:
-            fingerprint = process_fingerprint(os.getpid())
-        return cls._make_message(
-            type="disable_monitor", fingerprint=fingerprint, thread=thread
-        )

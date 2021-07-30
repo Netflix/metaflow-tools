@@ -28,11 +28,11 @@ class RunResolverException(Exception):
         self.flow = flow
 
     def __str__(self):
-        return "Couldn't find the RunID. :meow_dead: "
+        return "Couldn't find the run. :meow_dead: "
 
 
 class RunNotFound(RunResolverException):
-    def __init__(self, flow, runid):
+    def __init__(self, flow):
         super().__init__(flow)
 
 
@@ -78,23 +78,6 @@ STYLES = [  # [Run/ID]
 PARSER = [re.compile(x, re.IGNORECASE) for x in STYLES]
 
 
-def find_origin_id(run):
-    """find_origin_id
-    Needs to be better
-    """
-    origin_run_id = None
-    # TODO : Check if this can be done more efficiently.
-    # Listinng all stepss in one go can be troublesome.
-    for step in list(run.steps()):
-        origin_run_id = step.task.metadata_dict.get("origin-run-id")
-        if origin_run_id != "None" and origin_run_id is not None:
-            origin_run_id = f"{run.pathspec.split('/')[0]}/{origin_run_id}"
-            break
-        else:
-            origin_run_id = None
-
-    return origin_run_id
-
 
 def running_time(run):
     try:
@@ -111,17 +94,21 @@ def running_time(run):
 
 def datetime_response_parsing(secs):
     if secs < 60:
-        return "%d seconds" % secs
+        return "%d %s" % (secs,'second' if secs == 1 else 'seconds')
     elif secs < (60 * 60):  # If less than one hour
-        return "%d minutes" % (secs / 60)
+        return "%d %s" % (secs / 60, 'minute' if int(secs / 60) == 1 else 'minutes')
     elif secs < (24 * 60 * 60):  # If less than one day
         num_hours = math.floor(secs / (60 * 60))
         num_mins = (secs % (60 * 60)) / 60
-        return "%d hours and %d minutes" % (num_hours, num_mins)
+        hr_str = 'hours' if num_hours > 1 else 'hour'
+        min_str = 'minutes' if num_mins > 1 else 'minute'
+        return "%d %s and %d %s" % (num_hours, hr_str, num_mins, min_str)
     else:  # More than a day
         num_days = math.floor(secs / (24 * 60 * 60))
         num_hours = (secs % (24 * 60 * 60)) / (60 * 60)
-        return "%d days and %d hours" % (num_days, num_hours)
+        hr_str = 'hours' if num_hours > 1 else 'hour'
+        day_str = 'days' if num_days > 1 else 'day'
+        return "%d %s and %d %s" % (num_days, day_str, num_hours, hr_str)
 
 
 def step_runtime(tasks):
