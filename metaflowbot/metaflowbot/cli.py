@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 
 import click
@@ -6,7 +7,7 @@ import click
 from .action_loader import SUPPORTED_ACTIONS
 from .exceptions import MFBException
 from .rules import MFBRules
-from .server import MFBServer
+from .server import MFBServer, StateNotFound
 from .slack_client import MFBSlackClientV2
 
 LOGGER_TIMESTAMP = "magenta"
@@ -113,9 +114,19 @@ def server(obj, admin=None, new_admin_thread=False, load_state=None, action_user
     if new_admin_thread:
         server.new_admin_thread()
         log("Started a new admin thread.")
+
     if load_state:
         log("Starting to load previous state..")
-        server.reconstruct_state()
+        try:
+            server.reconstruct_state()
+        except StateNotFound as e:
+            log("Previous state was not found. "
+                "Making new admin thread")
+            server.new_admin_thread()
+            time.sleep(2)
+            server.reconstruct_state()
+        except:
+            raise
         log("State reconstructed.")
     log(head="Activating the bot..")
     server.loop_forever()

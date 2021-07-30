@@ -33,6 +33,8 @@ Event = namedtuple(
     ],
 )
 
+class StateNotFound(MFBException):
+    pass
 
 class FormatFriendlyDict(object):
     def __init__(self, data):
@@ -76,13 +78,13 @@ class MFBServer(object):
         On restart, State is reconstructed using a slack channel that has
         the dump of all messages.
 
-        :raises MFBException: [description]
+        :raises StateNotFound: [description]
         """
         for event in self._state_event_log():
             self._update_state(event)
             self.admin_thread = event.thread_ts
         if self.admin_thread is None:
-            raise MFBException(
+            raise StateNotFound(
                 "Could not find a state thread. " "Restart with --new-admin-thread."
             )
 
