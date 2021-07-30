@@ -194,7 +194,7 @@ class RunResolver(object):
             try:
                 runs = [flow[runid]]
             except KeyError:
-                raise RunNotFound(flow, runid)
+                raise RunNotFound(flow)
         else:
             tags = []
             if query.get("tag"):
