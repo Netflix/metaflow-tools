@@ -95,13 +95,10 @@ def run_status(run):
         return ""
 
 def are_tasks_success(tasks):
-    try:
-        if all(task.successful for task in tasks):
-            return 1
-        else:
-            return 0
-    except FileCacheException:
-        return -1
+    if all(task.successful for task in tasks):
+        return True
+    else:
+        return False
 
 
 def reply_inspect(obj, run_id):
@@ -114,16 +111,23 @@ def reply_inspect(obj, run_id):
             if idx > max_steps:
                 break
             tasks = list(step)
-            task_success_flag = are_tasks_success(tasks)
-            if task_success_flag == 1:
-                color = "good"
-                status = "All tasks finished successfully."
-            elif task_success_flag==0:
-                color = "warning"
-                status = "Some tasks failed or are still running."
-            elif task_success_flag==-1:
+            local_ds = False
+            if tasks[0].metadata_dict['ds-type'] == 'local':
+                # As task.successful is linked to S3
+                # https://github.com/Netflix/metaflow/blob/9f832e62b3d4288acae8de483dc5709d660dc347/metaflow/client/core.py#L904
+                local_ds = True
+            if not local_ds:
+                task_success_flag = are_tasks_success(tasks)
+
+            if local_ds:
                 color = "warning"
                 status = "Unable to get task status."
+            elif task_success_flag:
+                color = "good"
+                status = "All tasks finished successfully."
+            else:
+                color = "warning"
+                status = "Some tasks failed or are still running."
 
             fields = [
                 {"title": "Status", "value": status, "short": False},
@@ -138,7 +142,7 @@ def reply_inspect(obj, run_id):
                     "color": color,
                 }
             )
-        return sects,task_success_flag
+        return sects,local_ds
 
     def make_resolved_run(run: Run, total_steps=0, max_steps=SLACK_MAX_BLOCKS):
         resolved_run = ResolvedRun(
@@ -164,9 +168,9 @@ def reply_inspect(obj, run_id):
     run = Run(run_id)
     steps = list(run)
     resolved_run_info = make_resolved_run(run, total_steps=len(steps))
-    attachments,task_success_flag = step_resolver(steps)
+    attachments,local_ds = step_resolver(steps)
     blocks = []
-    if task_success_flag == -1:
+    if local_ds:
         blocks = [
             {"type": "section", "text": {"type": "mrkdwn", "text":resolved_run_info }},
             {

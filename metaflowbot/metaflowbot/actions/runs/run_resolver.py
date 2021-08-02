@@ -112,9 +112,7 @@ def datetime_response_parsing(secs):
 
 
 def step_runtime(tasks):
-    # Code dies here at times because
-    # t.finished_at is somehow linked to S3
-    # More info at : https://github.com/Netflix/metaflow/blob/48e37bea3ea4e83ddab8227869bbe56b52d9957d/metaflow/client/core.py#L956
+    # This is works with even local datastore.
     if tasks:
         try:
             end = [
