@@ -77,18 +77,31 @@ def inspect(obj, run_id=None, create_thread=False, howto=False):
 
 
 def run_status(run):
-    if run.finished:
-        if run.successful:
-            parsed_time_string = datetime_response_parsing(
-                (
-                    DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)
-                ).total_seconds()
-            )
-            return "It ran for %s and finished successfully." % parsed_time_string
+    try:
+        if run.finished:
+            if run.successful:
+                parsed_time_string = datetime_response_parsing(
+                    (
+                        DATEPARSER(run.finished_at) - DATEPARSER(run.created_at)
+                    ).total_seconds()
+                )
+                return "It ran for %s and finished successfully." % parsed_time_string
+            else:
+                return "It did not finish successfully."
         else:
-            return "It did not finish successfully."
-    else:
-        return "It has not finished."
+            return "It has not finished."
+    except FileCacheException as e:
+        # in case of local ds and service MD
+        return ""
+
+def are_tasks_success(tasks):
+    try:
+        if all(task.successful for task in tasks):
+            return 1
+        else:
+            return 0
+    except FileCacheException:
+        return -1
 
 
 def reply_inspect(obj, run_id):
@@ -101,12 +114,16 @@ def reply_inspect(obj, run_id):
             if idx > max_steps:
                 break
             tasks = list(step)
-            if all(task.successful for task in tasks):
+            task_success_flag = are_tasks_success(tasks)
+            if task_success_flag == 1:
                 color = "good"
                 status = "All tasks finished successfully."
-            else:
+            elif task_success_flag==0:
                 color = "warning"
                 status = "Some tasks failed or are still running."
+            elif task_success_flag==-1:
+                color = "warning"
+                status = "Unable to get task status."
 
             fields = [
                 {"title": "Status", "value": status, "short": False},
@@ -121,7 +138,7 @@ def reply_inspect(obj, run_id):
                     "color": color,
                 }
             )
-        return sects
+        return sects,task_success_flag
 
     def make_resolved_run(run: Run, total_steps=0, max_steps=SLACK_MAX_BLOCKS):
         resolved_run = ResolvedRun(
@@ -131,10 +148,11 @@ def reply_inspect(obj, run_id):
             when=run.created_at,
         )
         ago = timeago.format(DATEPARSER(resolved_run.when), now=datetime.utcnow())
+        run_stat = run_status(run)
         head = [
             "Run *%s* was started %s by _%s_."
             % (resolved_run.id, ago, resolved_run.who),
-            run_status(run),
+            run_stat,
             "Tags: %s" % ", ".join("`%s`" % tag for tag in run.tags),
             "Steps:"
             if total_steps <= max_steps
@@ -146,8 +164,27 @@ def reply_inspect(obj, run_id):
     run = Run(run_id)
     steps = list(run)
     resolved_run_info = make_resolved_run(run, total_steps=len(steps))
-    attachments = step_resolver(steps)
-    obj.reply(resolved_run_info, attachments=attachments)
+    attachments,task_success_flag = step_resolver(steps)
+    blocks = []
+    if task_success_flag == -1:
+        blocks = [
+            {"type": "section", "text": {"type": "mrkdwn", "text":resolved_run_info }},
+            {
+                "type":"divider"
+            },
+            {
+                "type":"context",
+                "elements":[{
+                    "type":"mrkdwn",
+                    "text":"Some information (duration/status) couldn't be "\
+                        "determined since the flow ran " \
+                        "with datastore configured to local filesystem."
+                        }]
+            }
+        ]
+        obj.reply(resolved_run_info,attachments=attachments,blocks=blocks)
+    else:
+        obj.reply(resolved_run_info,attachments=attachments)
 
 
 def howto_inspect_run(resolver):
