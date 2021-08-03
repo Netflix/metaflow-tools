@@ -107,15 +107,22 @@ def reply_inspect(obj, run_id):
     # can be sent to slack.
     def step_resolver(steps, max_steps=SLACK_MAX_BLOCKS):
         sects = []
+        discovered_datastore = False
+        local_ds = False
+
         for idx, step in enumerate(reversed(steps)):
             if idx > max_steps:
                 break
             tasks = list(step)
-            local_ds = False
-            if tasks[0].metadata_dict['ds-type'] == 'local':
-                # As task.successful is linked to S3
-                # https://github.com/Netflix/metaflow/blob/9f832e62b3d4288acae8de483dc5709d660dc347/metaflow/client/core.py#L904
-                local_ds = True
+
+            if not discovered_datastore:
+                discovered_datastore = True
+                object_storage_loc = tasks[0]['name']._object['location']
+                if not object_storage_loc.startswith('s3://'):
+                    # As task.successful is linked to S3
+                    # We check : https://github.com/Netflix/metaflow/blob/9f832e62b3d4288acae8de483dc5709d660dc347/metaflow/client/core.py#L712
+                    local_ds = True
+
             if not local_ds:
                 task_success_flag = are_tasks_success(tasks)
 
@@ -144,7 +151,7 @@ def reply_inspect(obj, run_id):
             )
         return sects,local_ds
 
-    def make_resolved_run(run: Run, total_steps=0, max_steps=SLACK_MAX_BLOCKS):
+    def make_resolved_run(run: Run, total_steps=0, max_steps=SLACK_MAX_BLOCKS,local_ds = False):
         resolved_run = ResolvedRun(
             id=run.pathspec,
             who=find_user(run),
@@ -153,42 +160,27 @@ def reply_inspect(obj, run_id):
         )
         ago = timeago.format(DATEPARSER(resolved_run.when), now=datetime.utcnow())
         run_stat = run_status(run)
+        tnc = "_Some information (duration/status) couldn't be "\
+        "determined since the flow ran " \
+        "with datastore configured to local filesystem._"
         head = [
             "Run *%s* was started %s by _%s_."
             % (resolved_run.id, ago, resolved_run.who),
             run_stat,
             "Tags: %s" % ", ".join("`%s`" % tag for tag in run.tags),
+            '' if not local_ds else tnc,
             "Steps:"
             if total_steps <= max_steps
             else f"Showing {max_steps}/{total_steps} Steps:",
         ]
-        return "\n".join(head)
 
+        return "\n".join(head)
     namespace(None)
     run = Run(run_id)
     steps = list(run)
-    resolved_run_info = make_resolved_run(run, total_steps=len(steps))
     attachments,local_ds = step_resolver(steps)
-    blocks = []
-    if local_ds:
-        blocks = [
-            {"type": "section", "text": {"type": "mrkdwn", "text":resolved_run_info }},
-            {
-                "type":"divider"
-            },
-            {
-                "type":"context",
-                "elements":[{
-                    "type":"mrkdwn",
-                    "text":"Some information (duration/status) couldn't be "\
-                        "determined since the flow ran " \
-                        "with datastore configured to local filesystem."
-                        }]
-            }
-        ]
-        obj.reply(resolved_run_info,attachments=attachments,blocks=blocks)
-    else:
-        obj.reply(resolved_run_info,attachments=attachments)
+    resolved_run_info = make_resolved_run(run, total_steps=len(steps),local_ds=local_ds)
+    obj.reply(resolved_run_info,attachments=attachments)
 
 
 def howto_inspect_run(resolver):

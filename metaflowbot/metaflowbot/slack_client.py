@@ -80,7 +80,6 @@ class SlackMessageQueue(Queue):
 
     def flush(self) -> List[dict]:
         """flush
-        TODO : Evaluate this abstraction better.
         Take all messages from the Queue and return to the caller.
         Essentially Empty Everything.
         https://stackoverflow.com/questions/8196254/how-to-iterate-queue-queue-items-in-python
@@ -108,7 +107,6 @@ def process(
         Payload from different events can be found : https://api.slack.com/events/
         Current `req.payload['event'].type == app_mention | message`
         """
-        # TODO: Should we Instant custom Acknowledgement.
         # ! acknowledgement is needed to ensure messages are not Double sent
         # Acknowledge the request anyway
         response = SocketModeResponse(envelope_id=req.envelope_id)
@@ -122,8 +120,6 @@ class SlackSocketSubscriber(Thread):
     This will use a message queue to keep sending messages to the main thread.
 
     This is a daemon thread because it should die when the program shuts and we don't care much about it once it starts
-
-    TODO : Ensure this thread runs without any kind of failure. Stress test the thread.
     """
 
     def __init__(
