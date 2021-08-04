@@ -51,7 +51,7 @@ Additionally:
 
 Initialize the terraform:
 
-`cd infra && terraform init`
+`cd metaflow && terraform init`
 
 Apply it:
 
@@ -98,7 +98,7 @@ Copy `example.tfvars` to `prod.tfvars` (or whatever environment name you prefer)
 
 Initialize the terraform:
 
-`cd infra && terraform init`
+`cd sagemaker-notebook && terraform init`
 
 Apply it:
 

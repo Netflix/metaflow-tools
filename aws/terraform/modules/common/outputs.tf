@@ -21,3 +21,6 @@ output "workspace_suffix" {
   value = terraform.workspace == "default" ? "" : "-${terraform.workspace}"
 }
 
+output "aws_regions" {
+  value = local.aws_regions
+}

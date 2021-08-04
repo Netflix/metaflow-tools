@@ -76,7 +76,7 @@ data "aws_iam_policy_document" "metaflow_policy" {
     ]
 
     resources = [
-      "arn:${var.iam_partition}:iam:${local.aws_region}:${local.aws_account_id}:role/${local.resource_prefix}*${local.resource_suffix}"
+      "arn:${var.iam_partition}:iam::${local.aws_account_id}:role/${local.resource_prefix}*${local.resource_suffix}"
     ]
   }
 

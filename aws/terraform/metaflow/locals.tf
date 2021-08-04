@@ -1,6 +1,6 @@
 locals {
   resource_prefix = var.app
-  resource_suffix = "${var.env}${module.common_vars.workspace_suffix}-${data.aws_region.current.name}"
+  resource_suffix = "${var.env}${module.common_vars.workspace_suffix}-${lookup(module.common_vars.aws_regions, data.aws_region.current.name, "")}"
 
   aws_region     = data.aws_region.current.name
   aws_account_id = data.aws_caller_identity.current.account_id
