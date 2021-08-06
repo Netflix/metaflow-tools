@@ -121,7 +121,7 @@ data "aws_iam_policy_document" "batch_perms" {
     effect = "Allow"
 
     actions = [
-      "batch:TerminateJob"
+      "batch:SubmitJob"
     ]
 
     resources = [
