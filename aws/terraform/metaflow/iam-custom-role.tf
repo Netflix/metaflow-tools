@@ -240,7 +240,7 @@ data "aws_iam_policy_document" "allow_event_bridge" {
     ]
 
     resources = [
-      "arn:${var.iam_partition}:events:${local.aws_region}:${local.aws_account_id}:rule:*",
+      "arn:${var.iam_partition}:events:${local.aws_region}:${local.aws_account_id}:rule/*",
     ]
   }
 
@@ -254,7 +254,7 @@ data "aws_iam_policy_document" "allow_event_bridge" {
     ]
 
     resources = [
-      "arn:${var.iam_partition}:events:${local.aws_region}:${local.aws_account_id}:rule:*",
+      "arn:${var.iam_partition}:events:${local.aws_region}:${local.aws_account_id}:rule/*",
     ]
 
     condition {
