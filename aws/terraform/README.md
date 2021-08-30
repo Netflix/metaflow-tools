@@ -8,7 +8,7 @@
 
 AWS should be [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) with a profile. The `AWS_PROFILE` environment should be set to the profile that has been configured.
 
-The [awscli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) can be used as follows to 
+The [awscli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) can be used as follows to
 confirm that it has been configured properly by running:
 
 ```
@@ -37,7 +37,7 @@ terraform apply --var-file prod.tfvars
 
 ### Metaflow stack
 
-The metaflow sub-project provisions the metadata API, AWS Step Functions, and an AWS Batch queue. For more details see the 
+The metaflow sub-project provisions the metadata API, AWS Step Functions, and an AWS Batch queue. For more details see the
 [README](aws/terraform/metaflow/README.md)
 
 Copy `example.tfvars` to `prod.tfvars` (or whatever environment name you prefer) and update that `env` name and the `region` as needed. These variables are used to construct unique names for infrastructure resources.
