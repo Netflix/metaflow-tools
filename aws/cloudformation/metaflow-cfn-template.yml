@@ -2,45 +2,45 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Stack for complete deployment of Metaflow (last-updated-date 02/09/2021)
 
 Parameters:
-  SagemakerInstance: 
+  SagemakerInstance:
     Type: String
     Default: ml.t2.xlarge
     AllowedValues: ['ml.t2.large','ml.t2.xlarge','ml.t2.2xlarge']
     Description: 'Instance type for Sagemaker Notebook.'
-  VPCCidr: 
+  VPCCidr:
     Type: String
     Default: 10.20.0.0/16
     Description: 'CIDR for the Metaflow VPC'
-  Subnet1Cidr: 
+  Subnet1Cidr:
     Type: String
     Default: 10.20.0.0/24
     Description: 'CIDR for Metaflow VPC Subnet 1'
-  Subnet2Cidr: 
+  Subnet2Cidr:
     Type: String
     Default: 10.20.1.0/24
     Description: 'CIDR for Metaflow VPC Subnet 2'
-  MaxVCPUBatch: 
+  MaxVCPUBatch:
     Type: Number
     Default: 64
     AllowedValues: [16,32,64,96]
     MinValue: 16
     MaxValue: 96
     Description: 'Maximum VCPUs for Batch Compute Environment [16-96]'
-  MinVCPUBatch: 
+  MinVCPUBatch:
     Type: Number
     Default: 8
     MinValue: 0
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
     Description: 'Minimum VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)'
-  DesiredVCPUBatch: 
+  DesiredVCPUBatch:
     Type: Number
     Default: 8
     MinValue: 0
     MaxValue: 16
     AllowedValues: [0,2,4,8,16]
     Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)'
-  ComputeEnvInstanceTypes: 
+  ComputeEnvInstanceTypes:
     Type: CommaDelimitedList
     Default: "c4.large,c4.xlarge,c4.2xlarge,c4.4xlarge,c4.8xlarge"
     Description: "The instance types for the compute environment as a comma-separated list"
@@ -76,7 +76,7 @@ Parameters:
 
 Mappings:
   ServiceInfo:
-    StackName: 
+    StackName:
       value: 'metaflow-infrastructure'
     ServiceName:
       value: 'metadata-service-v2'
@@ -448,31 +448,31 @@ Resources:
         ZipFile: |
           import os, json
           from urllib import request
-          
+
           def handler(event, context):
             response = {}
             status_endpoint = "{}/db_schema_status".format(os.environ.get('MD_LB_ADDRESS'))
             upgrade_endpoint = "{}/upgrade".format(os.environ.get('MD_LB_ADDRESS'))
-            
+
             with request.urlopen(status_endpoint) as status:
               response['init-status'] = json.loads(status.read())
-            
+
             upgrade_patch = request.Request(upgrade_endpoint, method='PATCH')
             with request.urlopen(upgrade_patch) as upgrade:
               response['upgrade-result'] = upgrade.read().decode()
-              
+
             with request.urlopen(status_endpoint) as status:
               response['final-status'] = json.loads(status.read())
-          
+
             print(response)
             return(response)
       Description: Trigger DB Migration
       FunctionName: !Join ['-', [!Ref 'AWS::StackName', 'migrate-db'] ]
       Timeout: 900
-      VpcConfig: 
-        SecurityGroupIds: 
+      VpcConfig:
+        SecurityGroupIds:
           - !GetAtt VPC.DefaultSecurityGroup
-        SubnetIds: 
+        SubnetIds:
           - !Ref Subnet1
           - !Ref Subnet2
   NLBTargetGroup:
@@ -622,7 +622,7 @@ Resources:
               Effect: Allow
               Action:
                 - logs:CreateLogStream
-              Resource: 
+              Resource:
                 - !Join [ "", [ !Sub 'arn:${IAMPartition}:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/batch/job:log-stream:*' ] ]
                 - !Join [ "", [ !Sub 'arn:${IAMPartition}:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/sagemaker/NotebookInstances:log-stream:*' ] ]
             - Sid: LogEvents
@@ -630,13 +630,13 @@ Resources:
               Action:
                 - logs:PutLogEvents
                 - logs:GetLogEvents
-              Resource: 
+              Resource:
                 - !Join [ "", [ !Sub 'arn:${IAMPartition}:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/sagemaker/NotebookInstances:log-stream:', !Ref 'AWS::StackName', '-NotebookInstance-', '{{resolve:secretsmanager:', !Ref RandomString, ':SecretString:password}}', '/jupyter.log' ] ]
                 - !Join [ "", [ !Sub 'arn:${IAMPartition}:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/sagemaker/NotebookInstances:log-stream:', !Ref 'AWS::StackName', '-NotebookInstance-', '{{resolve:secretsmanager:', !Ref RandomString, ':SecretString:password}}', '/LifecycleConfigOnCreate' ] ]
                 - !Join [ "", [ !Sub 'arn:${IAMPartition}:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/batch/job:log-stream:job-queue-' ] ]
             - Sid: LogGroup
               Effect: Allow
-              Action: 
+              Action:
                 - logs:DescribeLogGroups
                 - logs:DescribeLogStreams
                 - logs:CreateLogGroup
@@ -647,7 +647,7 @@ Resources:
             Statement:
               Sid: SageMakerNotebook
               Effect: "Allow"
-              Action: 
+              Action:
                 - "sagemaker:DescribeNotebook*"
                 - "sagemaker:StartNotebookInstance"
                 - "sagemaker:StopNotebookInstance"
@@ -700,26 +700,26 @@ Resources:
           Action:
             - sts:AssumeRole
       Path: /
-      Policies: 
+      Policies:
         - PolicyName: "Metaflow-Policy"
-          PolicyDocument: 
+          PolicyDocument:
             Version: "2012-10-17"
-            Statement: 
+            Statement:
               - Effect: "Allow"
-                Action: 
+                Action:
                   - "cloudformation:DescribeStacks"
                   - "cloudformation:*Stack"
                   - "cloudformation:*ChangeSet"
-                Resource: 
+                Resource:
                   - !Sub "arn:${IAMPartition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}-*"
               - Effect: "Allow"
-                Action: 
+                Action:
                   - "s3:*Object"
                 Resource:
                   - !GetAtt 'MetaflowS3Bucket.Arn'
                   - !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
               - Effect: "Allow"
-                Action: 
+                Action:
                   - "sagemaker:DescribeNotebook*"
                   - "sagemaker:StartNotebookInstance"
                   - "sagemaker:StopNotebookInstance"
@@ -729,7 +729,7 @@ Resources:
                   - !Sub "arn:${IAMPartition}:sagemaker:${AWS::Region}:${AWS::AccountId}:notebook-instance/${AWS::StackName}-*"
                   - !Sub "arn:${IAMPartition}:sagemaker:${AWS::Region}:${AWS::AccountId}:notebook-instance-lifecycle-config/basic*"
               - Effect: "Allow"
-                Action: 
+                Action:
                   - "iam:PassRole"
                 Resource:
                   - !Sub "arn:${IAMPartition}:iam::${AWS::AccountId}:role/${AWS::StackName}-*"
@@ -892,7 +892,7 @@ Resources:
               Resource: !GetAtt 'MetaflowS3Bucket.Arn'
             - Sid: ObjectAccess
               Effect: "Allow"
-              Action: 
+              Action:
                 - "s3:*Object"
               Resource:
                 - !GetAtt 'MetaflowS3Bucket.Arn'
@@ -929,7 +929,7 @@ Resources:
                   - "events:PutRule"
                 Resource: !Sub "arn:${IAMPartition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForBatchJobsRule"
                 Condition:
-                  StringEquals: 
+                  StringEquals:
                     events:detail-type: "Batch Job State Change"
         - PolicyName: DynamoDB
           PolicyDocument:
@@ -976,7 +976,7 @@ Resources:
       RoleArn: !GetAtt 'SageMakerExecutionRole.Arn'
       LifecycleConfigName: !GetAtt 'BasicNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleConfigName'
       SubnetId: !Ref Subnet1
-      SecurityGroupIds: 
+      SecurityGroupIds:
         - !Ref 'SagemakerSecurityGroup'
   RandomString:
     Type: AWS::SecretsManager::Secret
@@ -1118,7 +1118,7 @@ Resources:
               Resource: '*'
               Condition:
                 StringEquals:
-                  iam:PassedToService: 
+                  iam:PassedToService:
                     - ec2.amazonaws.com
                     - ec2.amazonaws.com.cn
                     - ecs-tasks.amazonaws.com
@@ -1330,7 +1330,7 @@ Resources:
       - Api
       - ApiDeployment
     Properties:
-      ApiStages: 
+      ApiStages:
       - ApiId: !Ref Api
         Stage: api
       UsagePlanName: !Join ["", [{"Ref": "AWS::StackName"}, "-usage-plan"]]
