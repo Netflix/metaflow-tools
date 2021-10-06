@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Nested stack for deployment of Metaflow UI (last-updated-date 09/24/2021)
+Description: Nested stack for deployment of Metaflow UI (last-updated-date 10/06/2021)
 
 Parameters:
   VPCId:
@@ -41,6 +41,9 @@ Parameters:
     Type: String
     Default: "metaflow"
     Description: "Database name"
+  MetaflowServiceUrl:
+    Type: String
+    Description: "Metaflow Service Url (Accessible in VPC)"
 
 Mappings:
   ServiceInfoUI:
@@ -206,6 +209,8 @@ Resources:
               Value: !Ref DatabasePassword
             - Name: "MF_METADATA_DB_NAME"
               Value: !Ref DatabaseName
+            - Name: "METAFLOW_SERVICE_URL"
+              Value: !Ref MetaflowServiceUrl
             - Name: "UI_ENABLED"
               Value: "1"
           Cpu: !FindInMap ["ServiceInfoUI", "ContainerCpu", "value"]

@@ -1351,6 +1351,7 @@ Resources:
       - MetadataSvcECSTaskRole
       - RDSMasterInstance
       - MyRDSSecret
+      - NLB
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: ui/metaflow-ui-cfn-template.yml
@@ -1367,6 +1368,7 @@ Resources:
         DatabaseUser: "master"
         DatabasePassword: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSSecret, ':SecretString:password}}' ]]
         DatabaseName: "metaflow"
+        MetaflowServiceUrl: !Sub "http://${NLB.DNSName}/"
 
 Outputs:
   MetaflowDataStoreS3Url:
