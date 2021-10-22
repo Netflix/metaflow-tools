@@ -27,3 +27,7 @@ repos:
         name: "Step Functions terraform module docs"
         files: "^aws/terraform/modules/metaflow/"
         args: ["-c", "aws/terraform/modules/metaflow/modules/.terraform-docs.yml", "markdown", "aws/terraform/modules/metaflow/modules/step-functions"]
+      - id: terraform-docs-go
+        name: "UI terraform module docs"
+        files: "^aws/terraform/modules/metaflow/"
+        args: ["-c", "aws/terraform/modules/metaflow/modules/.terraform-docs.yml", "markdown", "aws/terraform/modules/metaflow/modules/ui"]
