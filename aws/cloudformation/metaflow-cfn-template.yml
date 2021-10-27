@@ -315,11 +315,16 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              Sid: ObjectAccessMetadataService
-              Effect: Allow
-              Action:
-                - s3:GetObject
-              Resource: !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
+              - Sid: ObjectAccessMetadataService
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Join ['', [ !GetAtt 'MetaflowS3Bucket.Arn', '/*' ]]
+              - Sid: ObjectAccessMetadataServiceNonExistentKeys
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt 'MetaflowS3Bucket.Arn'
         - PolicyName: DenyPresignedBatch
           PolicyDocument:
             Version: '2012-10-17'
