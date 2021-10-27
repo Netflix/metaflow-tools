@@ -110,9 +110,9 @@ Mappings:
     ContainerPort:
       value: 8083
     ContainerCpu:
-      value: 512
+      value: 4096
     ContainerMemory:
-      value: 1024
+      value: 16384
     DesiredCount:
       value: 1
 
