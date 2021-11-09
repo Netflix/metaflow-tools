@@ -1,0 +1,20 @@
+apiVersion: v2
+description: Machine Learning plaform
+name: metaflow
+version: 0.0.1
+appVersion: 2.3.1
+keywords:
+  - mlops
+type: application
+home: https://metaflow.org
+sources:
+  - https://github.com/Netflix/metaflow
+  - https://github.com/outerbounds/metaflow-tools
+dependencies:
+- name: metaflow-service
+  version: 0.1.0
+- name: metaflow-ui
+  version: 0.1.0
+- name: postgresql
+  version: "^10"
+  repository: https://charts.bitnami.com/bitnami
