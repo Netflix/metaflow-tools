@@ -551,11 +551,11 @@ Resources:
     Properties:
       DBName: 'metaflow'
       AllocatedStorage: 20
-      DBInstanceClass: 'db.t2.small'
+      DBInstanceClass: 'db.t3.small'
       DeleteAutomatedBackups: 'true'
       StorageType: 'gp2'
       Engine: 'postgres'
-      EngineVersion: '11.5'
+      EngineVersion: '13.4'
       MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSSecret, ':SecretString:username}}' ]]
       MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSSecret, ':SecretString:password}}' ]]
       VPCSecurityGroups:
