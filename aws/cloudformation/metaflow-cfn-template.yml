@@ -122,7 +122,7 @@ Conditions:
   EnableFargateOnBatch: !Equals [ !Ref BatchType, 'fargate']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
-  EnableAddtionalWorkerPolicy: !Not [ !Equals [ !Ref AdditionalWorkerPolicyArn, ''] ]
+  EnableAdditionalWorkerPolicy: !Not [ !Equals [ !Ref AdditionalWorkerPolicyArn, ''] ]
   EnableUI: !Equals [ !Ref EnableUI, 'true']
 Resources:
   VPC:
@@ -1029,7 +1029,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - !If
-          - EnableAddtionalWorkerPolicy
+          - EnableAdditionalWorkerPolicy
           - !Ref 'AdditionalWorkerPolicyArn'
           - !Ref AWS::NoValue
       Policies:
@@ -1448,7 +1448,7 @@ Resources:
       UnhealthyThresholdCount: 2
       VpcId: !Ref VPC
 
-  # UI: Coudfront distribution
+  # UI: Cloudfront distribution
 
   CloudFrontDistributionUI:
     Type: AWS::CloudFront::Distribution
